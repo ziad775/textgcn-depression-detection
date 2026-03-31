@@ -1,4 +1,5 @@
 import pandas as pd
+import scipy.sparse as sp
 from preprocessing import load_and_clean_data
 from embedder import EmotionEmbedder
 from graph_builder import TextGCNGraph
@@ -16,21 +17,24 @@ def main():
     embedder = EmotionEmbedder(model_name="mental/mental-bert-base-uncased")
     embedded_df = embedder.process_dataset(cleaned_df)
     
-    # --- PHASE 3: Graph Construction (Part 1: TF-IDF) ---
-    print("\n[PHASE 3] Graph Construction: TF-IDF")
+    # --- PHASE 3: Graph Construction ---
+    print("\n[PHASE 3] Graph Construction")
     graph_builder = TextGCNGraph(embedded_df)
+    
+    # 3A: TF-IDF (Doc-Word edges)
     tfidf_matrix = graph_builder.build_tfidf_edges()
     
-    # Verification Check
-    doc_ids, word_ids = graph_builder.get_node_id_maps()
-    print("\n--- Verification Check: Graph Nodes ---")
-    print("Sample of extracted Word Nodes (checking for emojis/emoticons):")
+    # 3B: PMI (Word-Word edges)
+    pmi_edges = graph_builder.build_pmi_edges(window_size=20)
     
-    # Print a few words from our vocabulary to prove the emojis survived
-    vocab_list = list(word_ids.keys())
-    for word in vocab_list:
-        if any(char in word for char in [':', '/', '💪']):
-            print(f"SUCCESS -> Preserved Affective Token: {word}")
+    # 3C: Master Adjacency Matrix (The A Matrix)
+    A_matrix = graph_builder.build_adjacency_matrix(pmi_edges)
+
+    # Verification Check
+    print("\n--- Phase 3 Verification ---")
+    print(f"Is Adjacency Matrix Sparse? : {sp.issparse(A_matrix)}")
+    
+    print("\n[PIPELINE STATUS] Ready for Phase 4: Spektral GCN")
 
 if __name__ == "__main__":
     main()
