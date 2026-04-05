@@ -15,7 +15,12 @@ class TextGCNGraph:
         def custom_tokenizer(text):
             return text.split()
             
-        self.vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer, lowercase=False)
+        # THE FIX: Cap the vocabulary to the top 10,000 words to prevent RAM crashes
+        self.vectorizer = TfidfVectorizer(
+            tokenizer=custom_tokenizer, 
+            lowercase=False, 
+            max_features=10000  
+        )
         
     def build_tfidf_edges(self):
         """

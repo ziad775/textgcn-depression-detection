@@ -38,9 +38,13 @@ def load_and_clean_data(file_path: str) -> pd.DataFrame:
     # Load the CSV using Pandas
     df = pd.read_csv(file_path)
     
-    # Assuming the dataset has a column named 'text' (we can adjust this later)
+    # --- THE FIX FOR REAL DATA ---
+    # Rename 'tweet' to 'text' so the rest of the pipeline works.
+    # Also fixes the 'lable' typo to standard 'label' for the training script.
+    df.rename(columns={'tweet': 'text', 'lable': 'label'}, inplace=True)
+    
     if 'text' not in df.columns:
-        raise ValueError("Dataset must contain a 'text' column.")
+        raise ValueError("Dataset must contain a 'text' column (or 'tweet').")
         
     print("Cleaning social media posts (preserving emojis)...")
     
