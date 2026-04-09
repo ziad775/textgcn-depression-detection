@@ -2,7 +2,7 @@ import os
 import pandas as pd
 
 def main():
-    print("=== STEP 0: Data Aggregation (Platform-Specific) ===")
+    print("=== STEP 0: Data Aggregation (Context Restoration Phase) ===")
     
     # Define where your folders are located
     base_dir = "../data"
@@ -16,7 +16,7 @@ def main():
         "dataset4_reddit.csv": {
             "reddit_depression": 1,
             "reddit_non_depression": 0,
-            "reddit_breastcancer": 0  # Used as medical control if you wish, otherwise remove
+            "reddit_breastcancer": 0  # Used as medical control
         },
         "dataset5_mixed.csv": {
             "mixed_depression": 1,
@@ -45,22 +45,20 @@ def main():
                     
                     # Safely read the text file
                     with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
-                        text = file.read().replace('\n', ' ').strip()
+                        # Strip newlines and carriage returns to make it a single continuous string
+                        text = file.read().replace('\n', ' ').replace('\r', ' ').strip()
                         
-                        # THE LONG POST FIX: Keep only the first 75 words
-                        words = text.split()
-                        truncated_text = " ".join(words[:75])
-                        
-                        if truncated_text:
-                            dataset.append({"text": truncated_text, "label": label})
+                        if text:
+                            dataset.append({"text": text, "label": label})
                             total_files += 1
                             
         # Convert to a Pandas DataFrame and save
         if dataset:
             df = pd.DataFrame(dataset)
             save_path = os.path.join(base_dir, output_filename)
-            df.to_csv(save_path, index=False)
-            print(f"[SUCCESS] Saved {total_files} posts to {save_path}")
+            # THE FIX: Tell pandas to escape weird Reddit characters with a backslash
+            df.to_csv(save_path, index=False, escapechar='\\')
+            print(f"[SUCCESS] Saved {total_files} full-length posts to {save_path}")
 
 if __name__ == "__main__":
     main()

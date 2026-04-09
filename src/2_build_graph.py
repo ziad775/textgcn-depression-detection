@@ -6,34 +6,33 @@ from preprocessing import load_and_clean_data
 from graph_builder import TextGCNGraph
 
 def main():
-    print("=== STEP 2: Offline Graph Construction ===")
+    print("=== STEP 2: Offline Graph Construction (With Jaccard Edges) ===")
     start_time = time.time()
     
     # 1. Load the dataset
-    data_path = "../data/dataset2_twitter_English.csv"
+    data_path = "../data/dataset1_tweets_combined.csv"  # Make sure this points to your target dataset
     print(f"Loading data from {data_path}...")
     cleaned_df = load_and_clean_data(data_path)
     
     # 2. Build the Graph components
     graph_builder = TextGCNGraph(cleaned_df)
     
-    # The max_features=10000 limit we just added protects us here!
+    # Calculate Edges
     tfidf_matrix = graph_builder.build_tfidf_edges()
-    
-    # 3. Calculate PMI (This is the longest step on a real dataset)
     pmi_edges = graph_builder.build_pmi_edges(window_size=20)
     
-    # 4. Assemble the Master Adjacency Matrix
-    A_matrix = graph_builder.build_adjacency_matrix(pmi_edges)
+    # --- PHASE 2 INTEGRATION ---
+    jaccard_edges = graph_builder.build_jaccard_edges(threshold=0.05)
     
-    # 5. Save the Sparse Matrix to Hard Drive
+    # 3. Assemble the Master Adjacency Matrix
+    A_matrix = graph_builder.build_adjacency_matrix(pmi_edges, jaccard_edges)
+    
+    # 4. Save the Sparse Matrix to Hard Drive
     save_dir = "../data"
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
         
     save_path = os.path.join(save_dir, "A_matrix.npz")
-    
-    # sp.save_npz specifically compresses sparse matrices for maximum efficiency
     sp.save_npz(save_path, A_matrix)
     
     elapsed_time = time.time() - start_time
@@ -44,3 +43,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

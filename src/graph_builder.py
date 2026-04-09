@@ -15,7 +15,7 @@ class TextGCNGraph:
         def custom_tokenizer(text):
             return text.split()
             
-        # THE FIX: Cap the vocabulary to the top 10,000 words to prevent RAM crashes
+        # Cap the vocabulary to the top 10,000 words to prevent RAM crashes
         self.vectorizer = TfidfVectorizer(
             tokenizer=custom_tokenizer, 
             lowercase=False, 
@@ -27,7 +27,6 @@ class TextGCNGraph:
         Calculates TF-IDF to create edges between Word Nodes and Document Nodes.
         """
         print("Calculating TF-IDF (Word-Document edges)...")
-        # Attach tfidf_matrix to "self" so other functions can read it
         self.tfidf_matrix = self.vectorizer.fit_transform(self.df['cleaned_text'])
         
         self.vocab = self.vectorizer.get_feature_names_out()
@@ -48,8 +47,13 @@ class TextGCNGraph:
         print(f"Calculating PMI (Word-Word edges) with window size {window_size}...")
         windows = []
         
+        # THE FIX: Create a fast-lookup set of our exact 10,000 graph nodes
+        vocab_set = set(self.vocab)
+        
         for text in self.df['cleaned_text']:
-            words = text.split()
+            # Only keep words that actually exist as nodes in our graph
+            words = [w for w in text.split() if w in vocab_set]
+            
             length = len(words)
             if length <= window_size:
                 windows.append(set(words))
@@ -87,15 +91,41 @@ class TextGCNGraph:
         print(f"-> Generated {len(pmi_edges)} positive Word-Word connections.")
         return pmi_edges
 
+    def build_jaccard_edges(self, threshold=0.2):
+        """
+        Calculates Jaccard Similarity to create Document-Document edges.
+        """
+        print(f"Calculating Jaccard Similarity (Doc-Doc edges) with threshold {threshold}...")
+        
+        doc_sets = [set(text.split()) for text in self.df['cleaned_text']]
+        jaccard_edges = {}
+        
+        for i in range(self.num_docs):
+            for j in range(i + 1, self.num_docs):
+                set_i = doc_sets[i]
+                set_j = doc_sets[j]
+                
+                intersection = len(set_i.intersection(set_j))
+                
+                if intersection > 0:
+                    union = len(set_i.union(set_j))
+                    jaccard = intersection / union
+                    
+                    if jaccard >= threshold:
+                        jaccard_edges[(i, j)] = jaccard
+                        
+        print(f"-> Generated {len(jaccard_edges)} positive Doc-Doc connections.")
+        return jaccard_edges
+
     def get_node_id_maps(self):
         """Maps documents and words to specific integer indices."""
         doc_ids = {f"Doc_{i}": i for i in range(self.num_docs)}
         word_ids = {word: i + self.num_docs for i, word in enumerate(self.vocab)}
         return doc_ids, word_ids
 
-    def build_adjacency_matrix(self, pmi_edges):
+    def build_adjacency_matrix(self, pmi_edges, jaccard_edges):
         """
-        Fuses TF-IDF edges, PMI edges, and self-loops into the master Adjacency Matrix (A).
+        Fuses TF-IDF, PMI, Jaccard edges, and self-loops into the master Adjacency Matrix (A).
         """
         print("\nAssembling Master Adjacency Matrix [A]...")
         
@@ -115,19 +145,27 @@ class TextGCNGraph:
 
         # 2. Inject PMI (Word <-> Word Edges)
         for (w1, w2), pmi_val in pmi_edges.items():
-            id1 = word_ids[w1]
-            id2 = word_ids[w2]
-            row.extend([id1, id2])
-            col.extend([id2, id1])
-            weight.extend([pmi_val, pmi_val])
+            # Extra safety check just to be completely bulletproof
+            if w1 in word_ids and w2 in word_ids:
+                id1 = word_ids[w1]
+                id2 = word_ids[w2]
+                row.extend([id1, id2])
+                col.extend([id2, id1])
+                weight.extend([pmi_val, pmi_val])
             
-        # 3. Inject Self-Loops (Node <-> Node)
+        # 3. Inject Jaccard (Doc <-> Doc Edges)
+        for (d1, d2), jaccard_val in jaccard_edges.items():
+            row.extend([d1, d2])
+            col.extend([d2, d1])
+            weight.extend([jaccard_val, jaccard_val])
+            
+        # 4. Inject Self-Loops (Node <-> Node)
         for i in range(self.total_nodes):
             row.append(i)
             col.append(i)
             weight.append(1.0)
             
-        # 4. Construct Sparse Matrix
+        # 5. Construct Sparse Matrix
         adj_matrix = sp.csr_matrix(
             (weight, (row, col)), 
             shape=(self.total_nodes, self.total_nodes)

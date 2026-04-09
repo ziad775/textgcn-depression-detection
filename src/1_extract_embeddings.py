@@ -8,7 +8,7 @@ def main():
     print("=== STEP 1: Offline Feature Extraction ===")
     
     # 1. Load the dataset
-    data_path = "../data/dataset2_twitter_English.csv"
+    data_path = "../data/dataset1_tweets_combined.csv"
     print(f"Loading data from {data_path}...")
     df = load_and_clean_data(data_path)
     
