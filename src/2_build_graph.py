@@ -6,11 +6,11 @@ from preprocessing import load_and_clean_data
 from graph_builder import TextGCNGraph
 
 def main():
-    print("=== STEP 2: Offline Graph Construction (With Jaccard Edges) ===")
+    print("=== STEP 2: Offline Graph Construction (10/10 Paper Replica) ===")
     start_time = time.time()
     
     # 1. Load the dataset
-    data_path = "../data/dataset1_tweets_combined.csv"  # Make sure this points to your target dataset
+    data_path = "../data/dataset2_twitter_English.csv" 
     print(f"Loading data from {data_path}...")
     cleaned_df = load_and_clean_data(data_path)
     
@@ -21,8 +21,8 @@ def main():
     tfidf_matrix = graph_builder.build_tfidf_edges()
     pmi_edges = graph_builder.build_pmi_edges(window_size=20)
     
-    # --- PHASE 2 INTEGRATION ---
-    jaccard_edges = graph_builder.build_jaccard_edges(threshold=0.05)
+    # FIX 2: Set Jaccard threshold to 0.0 to keep all relations, matching the paper
+    jaccard_edges = graph_builder.build_jaccard_edges(threshold=0.0)
     
     # 3. Assemble the Master Adjacency Matrix
     A_matrix = graph_builder.build_adjacency_matrix(pmi_edges, jaccard_edges)
@@ -43,5 +43,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

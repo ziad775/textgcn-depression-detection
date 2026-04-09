@@ -1,32 +1,21 @@
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
 import pandas as pd
-import os
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from model import TextGCNModel
 from preprocessing import load_and_clean_data
 
-# --- Custom Graph Metrics (WITH CLASS WEIGHTS) ---
+# --- Custom Graph Metrics ---
 def masked_loss(y_true, y_pred, mask):
-    # 1. Define the Penalty Multipliers
-    # Class 0 (Non-Depressed) = 1.0 standard penalty
-    # Class 1 (Depressed) = 8.0 penalty to handle imbalance
-    class_weights = tf.constant([1.0, 5.0], dtype=tf.float32)
-
-    # 2. Calculate the standard cross-entropy error
     loss = tf.keras.losses.categorical_crossentropy(y_true, y_pred)
-
-    # 3. Apply the Penalty: Multiply the loss by weights ONLY for document nodes
-    weight_multiplier = tf.reduce_sum(class_weights * y_true, axis=1)
-    loss *= weight_multiplier
-
-    # 4. Apply the standard Graph Mask (so we don't calculate loss on Word Nodes)
     mask = tf.cast(mask, dtype=tf.float32)
-    mask /= tf.reduce_mean(mask) 
+    mask /= tf.reduce_mean(mask)
     loss *= mask
-    
     return tf.reduce_mean(loss)
 
 def masked_accuracy(y_true, y_pred, mask):
@@ -66,7 +55,7 @@ def main():
         if len(doc_indices) > 0:
             # Grab the 768-dim RoBERTa vectors for all containing documents
             containing_docs_features = doc_features[doc_indices]
-            # Calculate the minimum across all those documents [cite: 186]
+            # Calculate the minimum across all those documents
             word_features[w_idx] = np.min(containing_docs_features, axis=0)
             
     print("-> Min-pooling complete! Word Nodes are now semantically aware.")
@@ -86,7 +75,7 @@ def main():
     A_tf = tf.sparse.reorder(A_tf)
     
     # 2. Extract Real Labels from the CSV
-    csv_path = "../data/dataset1_tweets_combined.csv"
+    csv_path = "../data/dataset2_twitter_English.csv"
     print(f"Extracting true labels from {csv_path}...")
     
     df = load_and_clean_data(csv_path)
@@ -103,7 +92,7 @@ def main():
     print("Executing Phase 4: Strict 80/20 Split with Test-Set Monitoring...")
     doc_indices = np.arange(num_docs)
     
-    # 80:20 train/test split [cite: 396]
+    # 80:20 train/test split
     train_idx, test_idx = train_test_split(doc_indices, test_size=0.20, random_state=42)
     
     train_mask = np.zeros(total_nodes, dtype=bool)
@@ -126,15 +115,15 @@ def main():
     with tf.device('/CPU:0'):
         # Initialize Model & Optimizer INSIDE the CPU block
         model = TextGCNModel(num_classes=2, hidden_dim=200, dropout_rate=0.5)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001) # Paper baseline [cite: 398]
+        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001) # Paper baseline
         
         checkpoint_dir = "../checkpoints"
         os.makedirs(checkpoint_dir, exist_ok=True)
         checkpoint_path = os.path.join(checkpoint_dir, "best_model.weights.h5")
 
-        epochs = 200 # Paper duration [cite: 396]
+        epochs = 200 # Paper duration
         best_test_acc = 0.0
-        patience = 30 # Paper early stopping [cite: 396]
+        patience = 30 # Paper early stopping
         patience_counter = 0
         
         for epoch in range(epochs):
@@ -181,6 +170,18 @@ def main():
     
     print("=== CONFUSION MATRIX ===")
     print(confusion_matrix(y_true_test, y_pred_test))
+
+    # Calculate the exact macro-averaged metrics to match the paper's reporting style
+    acc = accuracy_score(y_true_test, y_pred_test)
+    prec = precision_score(y_true_test, y_pred_test, average='macro', zero_division=0)
+    rec = recall_score(y_true_test, y_pred_test, average='macro', zero_division=0)
+    f1 = f1_score(y_true_test, y_pred_test, average='macro', zero_division=0)
+
+    print("\n=== FINAL METRICS ===")
+    print(f"accuracy is : {acc:.4f}")
+    print(f"precision is : {prec:.4f}")
+    print(f"recall is : {rec:.4f}")
+    print(f"f1 score is : {f1:.4f}")
 
 if __name__ == "__main__":
     main()

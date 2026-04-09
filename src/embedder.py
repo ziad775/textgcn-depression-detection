@@ -16,8 +16,8 @@ class EmotionEmbedder:
         print(f"Compute Device Detected: {self.device.type.upper()}")
         
         # Load Hugging Face Tokenizer and Model (Forcing the token check)
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, token=True)
-        self.model = AutoModel.from_pretrained(model_name, token=True).to(self.device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name).to(self.device)
         
         # Lock the model weights (we are extracting features, not training BERT)
         self.model.eval() 

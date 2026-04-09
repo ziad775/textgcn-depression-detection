@@ -15,11 +15,12 @@ class TextGCNGraph:
         def custom_tokenizer(text):
             return text.split()
             
-        # Cap the vocabulary to the top 10,000 words to prevent RAM crashes
+        # FIX 1: Turn off L2 normalization and use ALL vocabulary features 
         self.vectorizer = TfidfVectorizer(
             tokenizer=custom_tokenizer, 
             lowercase=False, 
-            max_features=10000  
+            norm=None,          
+            max_features=None   
         )
         
     def build_tfidf_edges(self):
@@ -47,11 +48,9 @@ class TextGCNGraph:
         print(f"Calculating PMI (Word-Word edges) with window size {window_size}...")
         windows = []
         
-        # THE FIX: Create a fast-lookup set of our exact 10,000 graph nodes
         vocab_set = set(self.vocab)
         
         for text in self.df['cleaned_text']:
-            # Only keep words that actually exist as nodes in our graph
             words = [w for w in text.split() if w in vocab_set]
             
             length = len(words)
@@ -91,7 +90,7 @@ class TextGCNGraph:
         print(f"-> Generated {len(pmi_edges)} positive Word-Word connections.")
         return pmi_edges
 
-    def build_jaccard_edges(self, threshold=0.2):
+    def build_jaccard_edges(self, threshold=0.0):
         """
         Calculates Jaccard Similarity to create Document-Document edges.
         """
@@ -123,6 +122,22 @@ class TextGCNGraph:
         word_ids = {word: i + self.num_docs for i, word in enumerate(self.vocab)}
         return doc_ids, word_ids
 
+    # FIX 3: Add Equation 1 Normalization
+    def normalize_adjacency(self, adj):
+        """Applies the D^(-1/2) * A * D^(-1/2) normalization from Equation 1"""
+        print("Applying Symmetric Normalization (Equation 1)...")
+        rowsum = np.array(adj.sum(1))
+        
+        # Avoid division by zero
+        with np.errstate(divide='ignore'):
+            d_inv_sqrt = np.power(rowsum, -0.5).flatten()
+        d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.0
+        
+        d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
+        
+        # D^(-1/2) * A * D^(-1/2)
+        return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocsr()
+
     def build_adjacency_matrix(self, pmi_edges, jaccard_edges):
         """
         Fuses TF-IDF, PMI, Jaccard edges, and self-loops into the master Adjacency Matrix (A).
@@ -145,7 +160,6 @@ class TextGCNGraph:
 
         # 2. Inject PMI (Word <-> Word Edges)
         for (w1, w2), pmi_val in pmi_edges.items():
-            # Extra safety check just to be completely bulletproof
             if w1 in word_ids and w2 in word_ids:
                 id1 = word_ids[w1]
                 id2 = word_ids[w2]
@@ -171,6 +185,9 @@ class TextGCNGraph:
             shape=(self.total_nodes, self.total_nodes)
         )
         
-        print(f"-> Master Adjacency Matrix Built! Shape: {adj_matrix.shape}")
-        print(f"-> Total non-zero edges recorded: {adj_matrix.nnz}")
-        return adj_matrix
+        # Apply Equation 1 before returning!
+        normalized_adj = self.normalize_adjacency(adj_matrix)
+        
+        print(f"-> Master Adjacency Matrix Built and Normalized! Shape: {normalized_adj.shape}")
+        print(f"-> Total non-zero edges recorded: {normalized_adj.nnz}")
+        return normalized_adj
