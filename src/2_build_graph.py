@@ -10,7 +10,7 @@ def main():
     start_time = time.time()
     
     # 1. Load the dataset
-    data_path = "../data/dataset2_twitter_English.csv" 
+    data_path = "../data/dataset2_twitter_English_augmented.csv" 
     print(f"Loading data from {data_path}...")
     cleaned_df = load_and_clean_data(data_path)
     
@@ -22,7 +22,7 @@ def main():
     pmi_edges = graph_builder.build_pmi_edges(window_size=20)
     
     # FIX 2: Set Jaccard threshold to 0.0 to keep all relations, matching the paper
-    jaccard_edges = graph_builder.build_jaccard_edges(threshold=0.0)
+    jaccard_edges = graph_builder.build_jaccard_edges(threshold=0.2)
     
     # 3. Assemble the Master Adjacency Matrix
     A_matrix = graph_builder.build_adjacency_matrix(pmi_edges, jaccard_edges)

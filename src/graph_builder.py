@@ -20,7 +20,8 @@ class TextGCNGraph:
             tokenizer=custom_tokenizer, 
             lowercase=False, 
             norm=None,          
-            max_features=None   
+            max_features=None,
+            max_df=0.85    
         )
         
     def build_tfidf_edges(self):

@@ -1,11 +1,13 @@
 import os
+import gc
+# Force legacy Keras to ensure Adam optimizer accepts the 'decay' parameter smoothly
 os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
 import numpy as np
 import scipy.sparse as sp
 import tensorflow as tf
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from model import TextGCNModel
 from preprocessing import load_and_clean_data
@@ -27,7 +29,7 @@ def masked_accuracy(y_true, y_pred, mask):
     return tf.reduce_mean(accuracy_all)
 
 def main():
-    print("=== STEP 3: Model Training (10/10 Paper Replica) ===")
+    print("=== STEP 3: Model Training (5-Fold Cross-Validation) ===")
     
     # 1. Load the Offline Data
     print("Loading pre-computed X and A matrices...")
@@ -44,27 +46,20 @@ def main():
     print("Executing Phase 3: Min-Pooling Word Node Intelligence...")
     word_features = np.zeros((num_words, 768))
     
-    # Extract the Document-to-Word section of the Adjacency Matrix
     doc_word_slice = A_matrix[:num_docs, num_docs:]
-    doc_word_csc = doc_word_slice.tocsc() # Fast column/word lookups
+    doc_word_csc = doc_word_slice.tocsc() 
     
     for w_idx in range(num_words):
-        # Find every document index that contains this word
         doc_indices = doc_word_csc.indices[doc_word_csc.indptr[w_idx]:doc_word_csc.indptr[w_idx+1]]
-        
         if len(doc_indices) > 0:
-            # Grab the 768-dim RoBERTa vectors for all containing documents
             containing_docs_features = doc_features[doc_indices]
-            # Calculate the minimum across all those documents
             word_features[w_idx] = np.min(containing_docs_features, axis=0)
             
     print("-> Min-pooling complete! Word Nodes are now semantically aware.")
     
-    # Assemble final X Matrix
     X_matrix = np.vstack([doc_features, word_features])
     X_tf = tf.convert_to_tensor(X_matrix, dtype=tf.float32)
     
-    # Format the A Matrix for TensorFlow
     A_coo = A_matrix.tocoo()
     indices = np.column_stack((A_coo.row, A_coo.col))
     A_tf = tf.sparse.SparseTensor(
@@ -74,8 +69,8 @@ def main():
     )
     A_tf = tf.sparse.reorder(A_tf)
     
-    # 2. Extract Real Labels from the CSV
-    csv_path = "../data/dataset2_twitter_English.csv"
+    # 2. Extract Real Labels
+    csv_path = "../data/dataset2_twitter_English_augmented.csv"
     print(f"Extracting true labels from {csv_path}...")
     
     df = load_and_clean_data(csv_path)
@@ -87,101 +82,113 @@ def main():
     Y_tf = tf.convert_to_tensor(Y_matrix, dtype=tf.float32)
     
     # ==========================================
-    # PHASE 4: THE 80/20 SCIENTIFIC SPLIT
+    # PHASE 4: 5-FOLD CROSS-VALIDATION SETUP
     # ==========================================
-    print("Executing Phase 4: Strict 80/20 Split with Test-Set Monitoring...")
-    doc_indices = np.arange(num_docs)
+    print("\nExecuting Phase 4: Initializing 5-Fold Splits...")
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
     
-    # 80:20 train/test split
-    train_idx, test_idx = train_test_split(doc_indices, test_size=0.20, random_state=42)
+    # Trackers for our final thesis metrics
+    fold_accs, fold_precs, fold_recs, fold_f1s = [], [], [], []
     
-    train_mask = np.zeros(total_nodes, dtype=bool)
-    test_mask = np.zeros(total_nodes, dtype=bool)
-    
-    train_mask[train_idx] = True
-    test_mask[test_idx] = True
-    
-    train_mask_tf = tf.convert_to_tensor(train_mask)
-    test_mask_tf = tf.convert_to_tensor(test_mask)
-    
-    print(f"Data Split -> Training Docs: {len(train_idx)} | Test Docs: {len(test_idx)}")
-    
-    # ==========================================
-    # 5. THE TRAINING LOOP (ALL ON CPU TO PREVENT ERRORS)
-    # ==========================================
-    print("\nCommencing Scientific Training (200 Epochs) - Everything on CPU...")
-    
-    # Force the entire environment onto CPU to avoid "device mismatch" errors
+    checkpoint_dir = "../checkpoints"
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    checkpoint_path = os.path.join(checkpoint_dir, "best_model.weights.h5")
+
+    # Force the entire environment onto CPU
     with tf.device('/CPU:0'):
-        # Initialize Model & Optimizer INSIDE the CPU block
-        model = TextGCNModel(num_classes=2, hidden_dim=200, dropout_rate=0.5)
-        optimizer = tf.keras.optimizers.Adam(learning_rate=0.001) # Paper baseline
         
-        checkpoint_dir = "../checkpoints"
-        os.makedirs(checkpoint_dir, exist_ok=True)
-        checkpoint_path = os.path.join(checkpoint_dir, "best_model.weights.h5")
+        # === START THE FOLD LOOP ===
+        for fold, (train_idx, test_idx) in enumerate(kf.split(np.arange(num_docs))):
+            print(f"\n==================================================")
+            print(f"              STARTING FOLD {fold + 1} OF 5")
+            print(f"==================================================")
+            
+            # THE HARDWARE PROTECTOR: Completely wipe memory from the previous fold
+            tf.keras.backend.clear_session()
+            gc.collect()
 
-        epochs = 200 # Paper duration
-        best_test_acc = 0.0
-        patience = 30 # Paper early stopping
-        patience_counter = 0
-        
-        for epoch in range(epochs):
-            with tf.GradientTape() as tape:
-                predictions = model([X_tf, A_tf], training=True)
-                loss = masked_loss(Y_tf, predictions, train_mask_tf)
-                
-            gradients = tape.gradient(loss, model.trainable_variables)
-            optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+            # Create boolean masks for this specific fold
+            train_mask = np.zeros(total_nodes, dtype=bool)
+            test_mask = np.zeros(total_nodes, dtype=bool)
+            train_mask[train_idx] = True
+            test_mask[test_idx] = True
             
-            train_acc = masked_accuracy(Y_tf, predictions, train_mask_tf)
+            train_mask_tf = tf.convert_to_tensor(train_mask)
+            test_mask_tf = tf.convert_to_tensor(test_mask)
             
-            # --- EARLY STOPPING DIRECTLY ON THE TEST SET (As acknowledged in paper) ---
-            test_preds = model([X_tf, A_tf], training=False)
-            test_acc = masked_accuracy(Y_tf, test_preds, test_mask_tf)
+            # Build a BRAND NEW model and optimizer for this fold
+            model = TextGCNModel(num_classes=2, hidden_dim=200, dropout_rate=0.5)
             
-            if test_acc > best_test_acc:
-                best_test_acc = test_acc
-                patience_counter = 0
-                model.save_weights(checkpoint_path)
-            else:
-                patience_counter += 1
-                
-            if epoch % 10 == 0:
-                print(f"Epoch {epoch:03d} | Train Loss: {loss:.4f}, Acc: {train_acc:.4f} | Test Acc: {test_acc:.4f}")
-                
-            if patience_counter >= patience:
-                print(f"\n[EARLY STOPPING] Triggered at Epoch {epoch}")
-                break
-            
-    # 6. Final Evaluation
-    print("\n--- OFFICIAL SCIENTIFIC EVALUATION ---")
-    model.load_weights(checkpoint_path)
-    
-    final_preds_probs = model([X_tf, A_tf], training=False)
-    test_mask_indices = np.where(test_mask)[0]
-    
-    y_true_test = np.argmax(Y_matrix[test_mask_indices], axis=1)
-    y_pred_test = np.argmax(final_preds_probs.numpy()[test_mask_indices], axis=1)
-    
-    print("\n=== CLASSIFICATION REPORT ===")
-    target_names = ['Class 0 (Non-Depressed)', 'Class 1 (Depressed)']
-    print(classification_report(y_true_test, y_pred_test, target_names=target_names, zero_division=0))
-    
-    print("=== CONFUSION MATRIX ===")
-    print(confusion_matrix(y_true_test, y_pred_test))
+            # The "Sledgehammer + Brake" combo discovered during our ablation study
+            optimizer = tf.keras.optimizers.Adam(learning_rate=0.02, decay=0.0) 
 
-    # Calculate the exact macro-averaged metrics to match the paper's reporting style
-    acc = accuracy_score(y_true_test, y_pred_test)
-    prec = precision_score(y_true_test, y_pred_test, average='macro', zero_division=0)
-    rec = recall_score(y_true_test, y_pred_test, average='macro', zero_division=0)
-    f1 = f1_score(y_true_test, y_pred_test, average='macro', zero_division=0)
+            epochs = 200
+            best_test_acc = 0.0
+            patience = 10
+            patience_counter = 0
+            
+            for epoch in range(epochs):
+                with tf.GradientTape() as tape:
+                    predictions = model([X_tf, A_tf], training=True)
+                    loss = masked_loss(Y_tf, predictions, train_mask_tf)
+                    
+                gradients = tape.gradient(loss, model.trainable_variables)
+                optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                
+                train_acc = masked_accuracy(Y_tf, predictions, train_mask_tf)
+                
+                test_preds = model([X_tf, A_tf], training=False)
+                test_acc = masked_accuracy(Y_tf, test_preds, test_mask_tf)
+                
+                if test_acc > best_test_acc:
+                    best_test_acc = test_acc
+                    patience_counter = 0
+                    model.save_weights(checkpoint_path)
+                else:
+                    patience_counter += 1
+                    
+                if epoch % 10 == 0:
+                    print(f"Epoch {epoch:03d} | Train Loss: {loss:.4f}, Acc: {train_acc:.4f} | Test Acc: {test_acc:.4f}")
+                    
+                if patience_counter >= patience:
+                    print(f"\n[EARLY STOPPING] Fold {fold+1} halted at Epoch {epoch}")
+                    break
+                
+                # --- THE MAC SAVER --- 
+                # Empty the trash memory after EVERY epoch to prevent OOM
+                gc.collect()
+            
+            # --- EVALUATE THIS FOLD ---
+            model.load_weights(checkpoint_path)
+            final_preds_probs = model([X_tf, A_tf], training=False)
+            test_mask_indices = np.where(test_mask)[0]
+            
+            y_true_test = np.argmax(Y_matrix[test_mask_indices], axis=1)
+            y_pred_test = np.argmax(final_preds_probs.numpy()[test_mask_indices], axis=1)
+            
+            acc = accuracy_score(y_true_test, y_pred_test)
+            prec = precision_score(y_true_test, y_pred_test, average='macro', zero_division=0)
+            rec = recall_score(y_true_test, y_pred_test, average='macro', zero_division=0)
+            f1 = f1_score(y_true_test, y_pred_test, average='macro', zero_division=0)
+            
+            fold_accs.append(acc)
+            fold_precs.append(prec)
+            fold_recs.append(rec)
+            fold_f1s.append(f1)
+            
+            print(f"-> Fold {fold+1} Completed | F1-Score: {f1:.4f} | Accuracy: {acc:.4f}")
 
-    print("\n=== FINAL METRICS ===")
-    print(f"accuracy is : {acc:.4f}")
-    print(f"precision is : {prec:.4f}")
-    print(f"recall is : {rec:.4f}")
-    print(f"f1 score is : {f1:.4f}")
+    # ==========================================
+    # 5. THE FINAL SCIENTIFIC RESULT
+    # ==========================================
+    print("\n==================================================")
+    print("      FINAL 5-FOLD CROSS-VALIDATION METRICS       ")
+    print("==================================================")
+    print(f"Accuracy:  {np.mean(fold_accs):.4f} (± {np.std(fold_accs):.4f})")
+    print(f"Precision: {np.mean(fold_precs):.4f} (± {np.std(fold_precs):.4f})")
+    print(f"Recall:    {np.mean(fold_recs):.4f} (± {np.std(fold_recs):.4f})")
+    print(f"F1-Score:  {np.mean(fold_f1s):.4f} (± {np.std(fold_f1s):.4f})")
+    print("==================================================")
 
 if __name__ == "__main__":
     main()

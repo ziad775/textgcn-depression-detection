@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+import emoji
 
 def clean_text(text: str) -> str:
     """
@@ -8,9 +9,14 @@ def clean_text(text: str) -> str:
     if not isinstance(text, str):
         return ""
 
+    # NEW: Translate emojis into text before cleaning!
+    # By using spaces as delimiters, 💔 becomes " broken_heart "
+    #text = emoji.demojize(text, delimiters=(" ", " "))    
+
     text = text.lower()
     text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
     text = re.sub(r'\@\w+', '', text)
+    text = re.sub(r'\#\w+', '', text)
     text = re.sub(r'<.*?>', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     
