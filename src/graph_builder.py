@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import scipy.sparse as sp
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 import math
 from collections import defaultdict
 
@@ -48,12 +49,10 @@ class TextGCNGraph:
         """
         print(f"Calculating PMI (Word-Word edges) with window size {window_size}...")
         windows = []
-        
         vocab_set = set(self.vocab)
         
         for text in self.df['cleaned_text']:
             words = [w for w in text.split() if w in vocab_set]
-            
             length = len(words)
             if length <= window_size:
                 windows.append(set(words))
@@ -82,7 +81,6 @@ class TextGCNGraph:
             p_i = word_window_freq[w1] / total_windows
             p_j = word_window_freq[w2] / total_windows
             p_i_j = freq / total_windows
-            
             pmi = math.log(p_i_j / (p_i * p_j))
             
             if pmi > 0:
@@ -91,11 +89,11 @@ class TextGCNGraph:
         print(f"-> Generated {len(pmi_edges)} positive Word-Word connections.")
         return pmi_edges
 
-    def build_jaccard_edges(self, threshold=0.0):
+    def build_jaccard_edges(self, threshold=0.2):
         """
-        Calculates Jaccard Similarity to create Document-Document edges.
+        Calculates Jaccard Similarity to create lexical Document-Document edges.
         """
-        print(f"Calculating Jaccard Similarity (Doc-Doc edges) with threshold {threshold}...")
+        print(f"Calculating Jaccard Similarity (Lexical Doc-Doc edges) with threshold {threshold}...")
         
         doc_sets = [set(text.split()) for text in self.df['cleaned_text']]
         jaccard_edges = {}
@@ -106,16 +104,39 @@ class TextGCNGraph:
                 set_j = doc_sets[j]
                 
                 intersection = len(set_i.intersection(set_j))
-                
                 if intersection > 0:
                     union = len(set_i.union(set_j))
                     jaccard = intersection / union
-                    
                     if jaccard >= threshold:
                         jaccard_edges[(i, j)] = jaccard
                         
-        print(f"-> Generated {len(jaccard_edges)} positive Doc-Doc connections.")
+        print(f"-> Generated {len(jaccard_edges)} positive Lexical connections.")
         return jaccard_edges
+
+    def build_semantic_doc_edges(self, doc_embeddings, threshold=0.85):
+        """
+        NEW FEATURE: Calculates Cosine Similarity between RoBERTa document embeddings.
+        Creates 'Semantic Bridges' between short texts that share meaning but lack exact words.
+        """
+        print(f"Calculating Cosine Similarity (Semantic Doc-Doc edges) with threshold {threshold}...")
+        
+        # Calculate the cosine similarity for all pairs of documents at once
+        cos_sim_matrix = cosine_similarity(doc_embeddings)
+        
+        # Prevent self-loops (handled later by identity matrix)
+        np.fill_diagonal(cos_sim_matrix, 0)
+        
+        # Find all coordinates where the similarity is greater than our strict threshold
+        row_indices, col_indices = np.where(cos_sim_matrix >= threshold)
+        
+        semantic_edges = {}
+        for i, j in zip(row_indices, col_indices):
+            # Only store one direction (i < j) to match Jaccard logic and avoid duplicates
+            if i < j:
+                semantic_edges[(i, j)] = cos_sim_matrix[i, j]
+                
+        print(f"-> Discovered {len(semantic_edges)} Semantic Bridges between documents!")
+        return semantic_edges
 
     def get_node_id_maps(self):
         """Maps documents and words to specific integer indices."""
@@ -123,32 +144,25 @@ class TextGCNGraph:
         word_ids = {word: i + self.num_docs for i, word in enumerate(self.vocab)}
         return doc_ids, word_ids
 
-    # FIX 3: Add Equation 1 Normalization
     def normalize_adjacency(self, adj):
         """Applies the D^(-1/2) * A * D^(-1/2) normalization from Equation 1"""
         print("Applying Symmetric Normalization (Equation 1)...")
         rowsum = np.array(adj.sum(1))
         
-        # Avoid division by zero
         with np.errstate(divide='ignore'):
             d_inv_sqrt = np.power(rowsum, -0.5).flatten()
         d_inv_sqrt[np.isinf(d_inv_sqrt)] = 0.0
         
         d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
-        
-        # D^(-1/2) * A * D^(-1/2)
         return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocsr()
 
-    def build_adjacency_matrix(self, pmi_edges, jaccard_edges):
+    def build_adjacency_matrix(self, pmi_edges, jaccard_edges, semantic_edges=None):
         """
-        Fuses TF-IDF, PMI, Jaccard edges, and self-loops into the master Adjacency Matrix (A).
+        Fuses TF-IDF, PMI, Jaccard, Semantic edges, and self-loops into the master Adjacency Matrix (A).
         """
         print("\nAssembling Master Adjacency Matrix [A]...")
         
-        row = []
-        col = []
-        weight = []
-        
+        row, col, weight = [], [], []
         doc_ids, word_ids = self.get_node_id_maps()
         
         # 1. Inject TF-IDF (Doc <-> Word Edges)
@@ -168,25 +182,34 @@ class TextGCNGraph:
                 col.extend([id2, id1])
                 weight.extend([pmi_val, pmi_val])
             
-        # 3. Inject Jaccard (Doc <-> Doc Edges)
+        # 3. Inject Jaccard (Lexical Doc <-> Doc Edges)
         for (d1, d2), jaccard_val in jaccard_edges.items():
             row.extend([d1, d2])
             col.extend([d2, d1])
             weight.extend([jaccard_val, jaccard_val])
             
-        # 4. Inject Self-Loops (Node <-> Node)
+        # 4. Inject Semantic Bridges (Meaning-based Doc <-> Doc Edges)
+        if semantic_edges:
+            for (d1, d2), sim_val in semantic_edges.items():
+                row.extend([d1, d2])
+                col.extend([d2, d1])
+                weight.extend([sim_val, sim_val])
+            
+        # 5. Inject Self-Loops (Node <-> Node)
         for i in range(self.total_nodes):
             row.append(i)
             col.append(i)
             weight.append(1.0)
             
-        # 5. Construct Sparse Matrix
+        # 6. Construct Sparse Matrix
+        # Note: Scipy COO matrix automatically sums duplicate entries. 
+        # If two tweets share words (Jaccard) AND share meaning (Semantic), 
+        # their edge weight will mathematically stack, making the connection even stronger!
         adj_matrix = sp.csr_matrix(
             (weight, (row, col)), 
             shape=(self.total_nodes, self.total_nodes)
         )
         
-        # Apply Equation 1 before returning!
         normalized_adj = self.normalize_adjacency(adj_matrix)
         
         print(f"-> Master Adjacency Matrix Built and Normalized! Shape: {normalized_adj.shape}")
