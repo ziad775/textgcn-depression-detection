@@ -1,4 +1,4 @@
-Dataset 1 : learning rate 0.001
+Dataset 1 : learning rate 0.001 patience = 30
 
 
 
@@ -11,24 +11,32 @@ Recall:    0.6958 (± 0.0586)
 F1-Score:  0.7068 (± 0.0641)
 ==================================================
 
-augmrnted Datset 1 : learning rate 0.02
+after cosin edges
 
 ==================================================
       FINAL 5-FOLD CROSS-VALIDATION METRICS
 ==================================================
-Accuracy:  0.9800 (± 0.0095)
-Precision: 0.9815 (± 0.0137)
-Recall:    0.9659 (± 0.0137)
-F1-Score:  0.9733 (± 0.0127)
+Accuracy:  0.8162 (± 0.0072)
+Precision: 0.7887 (± 0.0111)
+Recall:    0.7007 (± 0.0108)
+F1-Score:  0.7248 (± 0.0107)
 ==================================================
+
+after usning cosin similirity and both mental bert and roberta
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Accuracy:  0.8438 (± 0.0093)
+Precision: 0.8108 (± 0.0153)
+Recall:    0.7678 (± 0.0342)
+F1-Score:  0.7828 (± 0.0281)
+==================================================
+
+
 
 Dataset 2 : learning rate 0.001 patience = 30
 
-=== FINAL METRICS ===
-accuracy is : 0.7800
-precision is : 0.7770
-recall is : 0.7792
-f1 score is : 0.7778
 
 
 ==================================================
@@ -49,6 +57,17 @@ Accuracy:  0.7830 (± 0.0169)
 Precision: 0.7840 (± 0.0151)
 Recall:    0.7803 (± 0.0195)
 F1-Score:  0.7799 (± 0.0180)
+==================================================
+
+after usning cosin similirity and both mental bert and roberta
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Accuracy:  0.8150 (± 0.0141)
+Precision: 0.8157 (± 0.0122)
+Recall:    0.8109 (± 0.0163)
+F1-Score:  0.8120 (± 0.0152)
 ==================================================
 
 
@@ -99,3 +118,5 @@ F1-Score:  0.8507 (± 0.0276)
 python 1_extract_embeddings.py
 python 2_build_graph.py
 python 3_train_model.py
+
+
