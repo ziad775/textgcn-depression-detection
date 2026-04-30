@@ -7,6 +7,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
 from huggingface_hub import login
 from preprocessing import load_and_clean_data
+from dotenv import load_dotenv
 
 def main():
     print("=== STEP 1: Dual-Brain Transformer Ensemble Extraction ===")
@@ -22,7 +23,7 @@ def main():
     print(f"Executing on device: {device}")
     
     # 2. Load the Dataset using the synchronized cleaning pipeline
-    data_path = "../data/dataset3_webforums.csv"
+    data_path = "../data/dataset5_mixed.csv"
     output_path = "../data/doc_embeddings.npy"
     
     print(f"Loading and cleaning data from {data_path}...")
