@@ -1,49 +1,54 @@
 import tensorflow as tf
 from spektral.layers import GCNConv
 
-class TextGCNModel(tf.keras.Model):
-    # Notice the new 'use_third_layer=False' parameter here
-    def __init__(self, num_classes=2, hidden_dim=200, dropout_rate=0.5, use_third_layer=False):
+class VotingTextGCNModel(tf.keras.Model):
+    def __init__(self, num_classes=2, hidden_dim=200, dropout_rate=0.5):
         super().__init__()
-        print(f"--- Initializing TextGCN Architecture ---")
-        print(f"-> Hidden Dimension: {hidden_dim}")
-        print(f"-> Output Classes: {num_classes}")
-        print(f"-> Architecture Depth: {'3 Layers (Experimental)' if use_third_layer else 'Standard 2 Layers'}")
+        print(f"--- Initializing DUAL-BRANCH Voting GCN Architecture ---")
+        print(f"-> Expert 1 Branch (MentalBERT) hidden dim: {hidden_dim}")
+        print(f"-> Expert 2 Branch (RoBERTaDepression) hidden dim: {hidden_dim}")
+        print(f"-> Final Layer: Soft Voting Mechanism (Average)")
         
-        self.use_third_layer = use_third_layer
-        
-        # Layer 1: The First Hidden Feature Extractor (1-hop)
-        self.gcn1 = GCNConv(hidden_dim, activation='relu')
-        self.dropout1 = tf.keras.layers.Dropout(dropout_rate)
-        
-        # OPTIONAL Layer 2: The Experimental Middle Layer (2-hop)
-        # We only create this if you turn the flag to True
-        if self.use_third_layer:
-            self.gcn_extra = GCNConv(hidden_dim, activation='relu')
-            self.dropout_extra = tf.keras.layers.Dropout(dropout_rate)
-        
-        # Final Layer: The Classifier (Depressed vs. Non-Depressed)
-        # (If 2 layers, this is Layer 2. If 3 layers, this is Layer 3)
-        self.gcn_final = GCNConv(num_classes, activation='softmax')
+        # ==========================================
+        # EXPERT 1 BRANCH (MentalBERT Focus)
+        # ==========================================
+        self.gcn1_expert1 = GCNConv(hidden_dim, activation='relu')
+        self.dropout_expert1 = tf.keras.layers.Dropout(dropout_rate)
+        self.classifier_expert1 = GCNConv(num_classes, activation='softmax')
+
+        # ==========================================
+        # EXPERT 2 BRANCH (RoBERTaDepression Focus)
+        # ==========================================
+        self.gcn1_expert2 = GCNConv(hidden_dim, activation='relu')
+        self.dropout_expert2 = tf.keras.layers.Dropout(dropout_rate)
+        self.classifier_expert2 = GCNConv(num_classes, activation='softmax')
 
     def call(self, inputs):
         """
-        The forward pass of the neural network. 
-        Spektral expects a list containing [Node Features (X), Adjacency Matrix (A)]
+        The forward pass of the neural network.
+        Splits the concatenated features, runs parallel networks, and votes.
         """
+        # x is the massive 1536-dimensional matrix, a is the adjacency matrix
         x, a = inputs
         
-        # --- 1st Ripple (Gather from direct neighbors) ---
-        x = self.gcn1([x, a])
-        x = self.dropout1(x)
+        # 1. THE SPLIT: Separate the 1536d vector back into two 768d vectors
+        # (Assuming you concatenated them as [MentalBERT(768) + RoBERTaDepression(768)])
+        x_expert1 = x[:, :768]   # Grabs the first 768 columns
+        x_expert2 = x[:, 768:]   # Grabs the last 768 columns
+
+        # 2. EXPERT 1 DIAGNOSIS
+        out_expert1 = self.gcn1_expert1([x_expert1, a])
+        out_expert1 = self.dropout_expert1(out_expert1)
+        probs_expert1 = self.classifier_expert1([out_expert1, a]) # Outputs e.g., [0.20, 0.80]
+
+        # 3. EXPERT 2 DIAGNOSIS
+        out_expert2 = self.gcn1_expert2([x_expert2, a])
+        out_expert2 = self.dropout_expert2(out_expert2)
+        probs_expert2 = self.classifier_expert2([out_expert2, a]) # Outputs e.g., [0.40, 0.60]
+
+        # 4. THE VOTING MECHANISM (Soft Voting / Averaging)
+        # We add the probabilities together and divide by 2.
+        # Example: ([0.20, 0.80] + [0.40, 0.60]) / 2 = [0.30, 0.70] -> Final Prediction: Class 1
+        final_votes = (probs_expert1 + probs_expert2) / 2.0
         
-        # --- 2nd Ripple (Gather from neighbors' neighbors) ---
-        # This only executes if you turned the flag on!
-        if self.use_third_layer:
-            x = self.gcn_extra([x, a])
-            x = self.dropout_extra(x)
-        
-        # --- Final Ripple (The Softmax Judge) ---
-        x = self.gcn_final([x, a])
-        
-        return x
+        return final_votes
