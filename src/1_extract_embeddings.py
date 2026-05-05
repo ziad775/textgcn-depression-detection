@@ -23,7 +23,7 @@ def main():
     print(f"Executing on device: {device}")
     
     # 2. Load the Dataset using the synchronized cleaning pipeline
-    data_path = "../data/dataset1_tweets_combined.csv"
+    data_path = "../data/dataset2_twitter_English.csv"
     output_path = "../data/doc_embeddings.npy"
     
     print(f"Loading and cleaning data from {data_path}...")

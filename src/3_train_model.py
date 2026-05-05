@@ -12,12 +12,26 @@ from sklearn.metrics import classification_report, confusion_matrix, accuracy_sc
 from model import VotingTextGCNModel
 from preprocessing import load_and_clean_data
 
-# --- Custom Graph Metrics ---
-def masked_loss(y_true, y_pred, mask):
+# ==========================================
+# --- Upgraded Custom Graph Metrics ---
+# ==========================================
+def masked_loss(y_true, y_pred, mask, class_weights_tensor):
+    """
+    Calculates Cross-Entropy Loss, applies the minority class penalties, 
+    and masks it for the graph.
+    """
+    # 1. Calculate standard loss
     loss = tf.keras.losses.categorical_crossentropy(y_true, y_pred)
+    
+    # 2. THE PENALTY MULTIPLIER: Increase loss gravity for minority classes
+    weights_per_sample = tf.reduce_sum(y_true * class_weights_tensor, axis=1)
+    loss = loss * weights_per_sample
+    
+    # 3. Apply the graph mask (ignore test nodes during training)
     mask = tf.cast(mask, dtype=tf.float32)
     mask /= tf.reduce_mean(mask)
     loss *= mask
+    
     return tf.reduce_mean(loss)
 
 def masked_accuracy(y_true, y_pred, mask):
@@ -77,6 +91,25 @@ def main():
     df = load_and_clean_data(csv_path)
     raw_labels = df['label'].values 
     
+    # ==========================================
+    # NEW: DYNAMIC CLASS WEIGHT CALCULATION
+    # ==========================================
+    neg_count = np.sum(raw_labels == 0)
+    pos_count = np.sum(raw_labels == 1)
+    total_count = len(raw_labels)
+
+    # Formula: Weight = Total_Samples / (Number_of_Classes * Class_Count)
+    weight_for_0 = (1 / neg_count) * (total_count / 2.0)
+    weight_for_1 = (1 / pos_count) * (total_count / 2.0)
+    
+    print(f"\n[CLASS IMBALANCE DETECTED]")
+    print(f"-> Non-Depressed (Class 0): {neg_count} tweets | Weight: {weight_for_0:.2f}x")
+    print(f"-> Depressed (Class 1):     {pos_count} tweets | Weight: {weight_for_1:.2f}x")
+    
+    # Convert weights into a TensorFlow constant so the GPU/CPU can use it instantly
+    class_weights_tensor = tf.constant([weight_for_0, weight_for_1], dtype=tf.float32)
+    # ==========================================
+    
     doc_labels = tf.one_hot(raw_labels, depth=2).numpy()
     word_labels = np.zeros((num_words, 2))
     Y_matrix = np.vstack([doc_labels, word_labels])
@@ -130,14 +163,17 @@ def main():
             
             for epoch in range(epochs):
                 with tf.GradientTape() as tape:
+                    # training=True triggers the Soft-Voting (Average) to keep gradients stable
                     predictions = model([X_tf, A_tf], training=True)
-                    loss = masked_loss(Y_tf, predictions, train_mask_tf)
+                    # Pass the class weights into the loss function here!
+                    loss = masked_loss(Y_tf, predictions, train_mask_tf, class_weights_tensor)
                     
                 gradients = tape.gradient(loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradients, model.trainable_variables))
                 
                 train_acc = masked_accuracy(Y_tf, predictions, train_mask_tf)
                 
+                # training=False triggers your Max-Pooling OR-gate logic!
                 test_preds = model([X_tf, A_tf], training=False)
                 test_acc = masked_accuracy(Y_tf, test_preds, test_mask_tf)
                 
@@ -161,6 +197,7 @@ def main():
             
             # --- EVALUATE THIS FOLD ---
             model.load_weights(checkpoint_path)
+            # Make sure we use training=False for the final evaluation to keep the OR-gate active
             final_preds_probs = model([X_tf, A_tf], training=False)
             test_mask_indices = np.where(test_mask)[0]
             

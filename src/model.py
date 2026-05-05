@@ -22,33 +22,40 @@ class VotingTextGCNModel(tf.keras.Model):
         self.gcn1_expert2 = GCNConv(hidden_dim, activation='relu')
         self.dropout_expert2 = tf.keras.layers.Dropout(dropout_rate)
         self.classifier_expert2 = GCNConv(num_classes, activation='softmax')
-
-    def call(self, inputs):
-        """
-        The forward pass of the neural network.
-        Splits the concatenated features, runs parallel networks, and votes.
-        """
-        # x is the massive 1536-dimensional matrix, a is the adjacency matrix
+# Notice we added 'training=False' here
+    def call(self, inputs, training=False):
         x, a = inputs
         
-        # 1. THE SPLIT: Separate the 1536d vector back into two 768d vectors
-        # (Assuming you concatenated them as [MentalBERT(768) + RoBERTaDepression(768)])
-        x_expert1 = x[:, :768]   # Grabs the first 768 columns
-        x_expert2 = x[:, 768:]   # Grabs the last 768 columns
+        # 1. Split the data
+        x_expert1 = x[:, :768]
+        x_expert2 = x[:, 768:]
 
-        # 2. EXPERT 1 DIAGNOSIS
+        # 2. Get Expert 1 Probabilities
         out_expert1 = self.gcn1_expert1([x_expert1, a])
-        out_expert1 = self.dropout_expert1(out_expert1)
-        probs_expert1 = self.classifier_expert1([out_expert1, a]) # Outputs e.g., [0.20, 0.80]
+        # Dropout behaves differently during training vs testing automatically!
+        out_expert1 = self.dropout_expert1(out_expert1, training=training)
+        probs_expert1 = self.classifier_expert1([out_expert1, a]) 
 
-        # 3. EXPERT 2 DIAGNOSIS
+        # 3. Get Expert 2 Probabilities
         out_expert2 = self.gcn1_expert2([x_expert2, a])
-        out_expert2 = self.dropout_expert2(out_expert2)
-        probs_expert2 = self.classifier_expert2([out_expert2, a]) # Outputs e.g., [0.40, 0.60]
+        out_expert2 = self.dropout_expert2(out_expert2, training=training)
+        probs_expert2 = self.classifier_expert2([out_expert2, a]) 
 
-        # 4. THE VOTING MECHANISM (Soft Voting / Averaging)
-        # We add the probabilities together and divide by 2.
-        # Example: ([0.20, 0.80] + [0.40, 0.60]) / 2 = [0.30, 0.70] -> Final Prediction: Class 1
-        final_votes = (probs_expert1 + probs_expert2) / 2.0
-        
+        # ==========================================
+        # 4. THE DUAL-LOGIC VOTING MECHANISM
+        # ==========================================
+        if training:
+            # PHASE 1: TRAINING (The Calculus Protector)
+            # We use Soft-Voting (Average) so both experts receive gradient updates and learn equally.
+            final_votes = (probs_expert1 + probs_expert2) / 2.0
+            
+        else:
+            # PHASE 2: TESTING / INFERENCE (Your "OR Gate" Logic)
+            # The model is no longer learning, so we can safely use the strict Max-Pooling logic!
+            # If EITHER expert is highly confident, we trust them.
+            final_votes = tf.maximum(probs_expert1, probs_expert2)
+            
+            # Re-normalize so the maximums still add up to 100%
+            final_votes = final_votes / tf.reduce_sum(final_votes, axis=1, keepdims=True)
+            
         return final_votes
