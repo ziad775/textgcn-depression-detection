@@ -3,52 +3,58 @@ import numpy as np
 import scipy.sparse as sp
 import os
 import time
+from imblearn.over_sampling import SMOTE
 from preprocessing import load_and_clean_data
-from graph_builder import TextGCNGraph
+from graph_builder import HomogeneousGraphBuilder
 
 def main():
-    print("=== STEP 2: Offline Graph Construction (With Semantic Upgrade) ===")
+    print("=== STEP 2: SMOTE Data Synthesis & Graph Construction ===")
     start_time = time.time()
     
-    # 1. Load the dataset
+    # 1. Load the Imbalanced Dataset (Make sure balance_data=False in preprocessing!)
     data_path = "../data/dataset1_tweets_combined.csv" 
-    print(f"Loading data from {data_path}...")
-    cleaned_df = load_and_clean_data(data_path)
+    print(f"Loading raw labels from {data_path}...")
     
-    # 2. Load the embeddings for the Semantic Upgrade
-    print("Loading document embeddings for Semantic Graph Upgrade...")
+    # NOTE: Ensure your load_and_clean_data function returns the full imbalanced set here!
+   # CORRECT
+    cleaned_df = load_and_clean_data(data_path)
+    raw_labels = cleaned_df['label'].values
+    
+    # 2. Load the Imbalanced Embeddings from Step 1
+    print("Loading original document embeddings...")
     doc_features = np.load("../data/doc_embeddings.npy")
     
-    # 3. Build the Graph components
-    graph_builder = TextGCNGraph(cleaned_df)
+    print(f"\nOriginal Data Shape: {doc_features.shape}")
+    print(f"Original Label Distribution: \n{pd.Series(raw_labels).value_counts()}")
     
-    # Calculate Edges
-    tfidf_matrix = graph_builder.build_tfidf_edges()
-    pmi_edges = graph_builder.build_pmi_edges(window_size=20)
+    # ==========================================
+    # THE SMOTE ALGORITHM
+    # ==========================================
+    print("\n[INITIATING SMOTE] Generating synthetic clinical vectors...")
+    smote = SMOTE(random_state=42)
     
-    # Calculate Lexical Edges
-    jaccard_edges = graph_builder.build_jaccard_edges(threshold=0.2)
+    # This generates brand new 1536-dimensional arrays for the minority class!
+    balanced_features, balanced_labels = smote.fit_resample(doc_features, raw_labels)
     
-    # Calculate Semantic Edges (The New Upgrade)
-    # We use a strict threshold (0.85) to ensure we only connect tweets with highly similar meanings
-    semantic_edges = graph_builder.build_semantic_doc_edges(doc_features, threshold=0.85)
+    print(f"-> SMOTE Complete! New Data Shape: {balanced_features.shape}")
+    print(f"-> New Label Distribution: \n{pd.Series(balanced_labels).value_counts()}")
     
-    # 4. Assemble the Master Adjacency Matrix
-    A_matrix = graph_builder.build_adjacency_matrix(pmi_edges, jaccard_edges, semantic_edges)
+    # 3. Save the new SMOTE-Balanced features so Step 3 can use them
+    np.save("../data/balanced_doc_embeddings.npy", balanced_features)
+    np.save("../data/balanced_labels.npy", balanced_labels)
     
-    # 5. Save the Sparse Matrix to Hard Drive
-    save_dir = "../data"
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-        
-    save_path = os.path.join(save_dir, "A_matrix.npz")
-    sp.save_npz(save_path, A_matrix)
+    # ==========================================
+    # GRAPH CONSTRUCTION
+    # ==========================================
+    # 4. Pass the balanced features to our new Homogeneous Graph Builder
+    graph_builder = HomogeneousGraphBuilder(balanced_features, threshold=0.85)
+    A_matrix = graph_builder.build_adjacency_matrix()
+    
+    # 5. Save the Matrix
+    sp.save_npz("../data/A_matrix.npz", A_matrix)
     
     elapsed_time = time.time() - start_time
-    print(f"\n[SUCCESS] Upgraded Adjacency Matrix saved to: {save_path}")
-    print(f"Final Matrix Shape: {A_matrix.shape}")
-    print(f"Total Edges (nnz): {A_matrix.nnz}")
-    print(f"Graph Construction Time: {elapsed_time:.2f} seconds.")
+    print(f"\n[SUCCESS] Homogeneous SMOTE Graph Construction Time: {elapsed_time:.2f} seconds.")
 
 if __name__ == "__main__":
     main()
