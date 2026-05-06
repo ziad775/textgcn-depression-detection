@@ -11,7 +11,7 @@ def main():
     start_time = time.time()
     
     # 1. Load the dataset
-    data_path = "../data/dataset5_mixed.csv" 
+    data_path = "../data/dataset1_tweets_combined.csv" 
     print(f"Loading data from {data_path}...")
     cleaned_df = load_and_clean_data(data_path)
     
@@ -31,7 +31,7 @@ def main():
     
     # Calculate Semantic Edges (The New Upgrade)
     # We use a strict threshold (0.85) to ensure we only connect tweets with highly similar meanings
-    semantic_edges = graph_builder.build_semantic_doc_edges(doc_features, threshold=0.92)
+    semantic_edges = graph_builder.build_semantic_doc_edges(doc_features, threshold=0.85)
     
     # 4. Assemble the Master Adjacency Matrix
     A_matrix = graph_builder.build_adjacency_matrix(pmi_edges, jaccard_edges, semantic_edges)

@@ -71,7 +71,7 @@ def main():
     A_tf = tf.sparse.reorder(A_tf)
     
     # 2. Extract Real Labels
-    csv_path = "../data/dataset5_mixed.csv"
+    csv_path = "../data/dataset1_tweets_combined.csv"
     print(f"Extracting true labels from {csv_path}...")
     
     df = load_and_clean_data(csv_path)
@@ -121,7 +121,7 @@ def main():
             model = TextGCNModel(num_classes=2, hidden_dim=200, dropout_rate=0.5, use_third_layer=False)
             
             # The "Sledgehammer + Brake" combo discovered during our ablation study
-            optimizer = tf.keras.optimizers.Adam(learning_rate=0.02, decay=0.0) 
+            optimizer = tf.keras.optimizers.Adam(learning_rate=0.001, decay=0.0) 
 
             epochs = 200
             best_test_acc = 0.0
