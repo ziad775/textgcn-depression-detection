@@ -5,86 +5,101 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModel
+from sklearn.decomposition import PCA
 from huggingface_hub import login
 from preprocessing import load_and_clean_data
 from dotenv import load_dotenv
 
 def main():
-    print("=== STEP 1: Dual-Brain Transformer Ensemble Extraction ===")
+    print("=== STEP 1: Tri-Brain Transformer Ensemble Extraction ===")
 
     load_dotenv() 
-
     HUGGING_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
-    
     login(token=HUGGING_API_KEY)
 
-    # 1. Hardware Setup
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Executing on device: {device}")
     
-    # 2. Load the Dataset using the synchronized cleaning pipeline
-    data_path = "../data/dataset1_tweets_combined.csv"
+    data_path = "../data/dataset2_twitter_English.csv"
     output_path = "../data/doc_embeddings.npy"
     
     print(f"Loading and cleaning data from {data_path}...")
-    # This guarantees Step 1 drops the exact same junk rows as Step 2 and 3!
     df = load_and_clean_data(data_path) 
     texts = df['cleaned_text'].astype(str).tolist()
     
     # ==========================================
-    # MODEL 1: The Generalist (RoBERTa)
+    # MODEL 1: RoBERTa (Syntax & General Context)
     # ==========================================
-    print("\nLoading Model 1: roberta-base (General Syntax & Slang)...")
-    tokenizer_roberta = AutoTokenizer.from_pretrained("roberta-base")
-    model_roberta = AutoModel.from_pretrained("roberta-base").to(device)
-    model_roberta.eval() # Lock model for inference only
+    print("\nLoading Brain 1: roberta-base...")
+    tok_rob = AutoTokenizer.from_pretrained("roberta-base")
+    mod_rob = AutoModel.from_pretrained("roberta-base").to(device)
+    mod_rob.eval()
     
     # ==========================================
-    # MODEL 2: The Specialist (MentalBERT)
+    # MODEL 2: MentalBERT (Clinical Undertones)
     # ==========================================
-    print("Loading Model 2: mental/mental-bert-base-uncased (Clinical Undertones)...")
-    tokenizer_mental = AutoTokenizer.from_pretrained("mental/mental-bert-base-uncased")
-    model_mental = AutoModel.from_pretrained("mental/mental-bert-base-uncased").to(device)
-    model_mental.eval()
+    print("Loading Brain 2: mental/mental-bert-base-uncased...")
+    tok_men = AutoTokenizer.from_pretrained("mental/mental-bert-base-uncased")
+    mod_men = AutoModel.from_pretrained("mental/mental-bert-base-uncased").to(device)
+    mod_men.eval()
+
+    # ==========================================
+    # MODEL 3: GoEmotions (Psychological Affect)
+    # ==========================================
+    print("Loading Brain 3: SamLowe/roberta-base-go_emotions...")
+    tok_emo = AutoTokenizer.from_pretrained("SamLowe/roberta-base-go_emotions")
+    mod_emo = AutoModel.from_pretrained("SamLowe/roberta-base-go_emotions").to(device)
+    mod_emo.eval()
 
     ensemble_embeddings = []
     
-    print(f"\nBeginning 1536-Dimensional Feature Extraction for {len(texts)} texts...")
+    print(f"\nBeginning 2304-Dimensional Feature Extraction for {len(texts)} texts...")
     
-    # Disable gradient calculation to save massive amounts of RAM
     with torch.no_grad():
         for text in tqdm(texts, desc="Processing Tweets"):
+            # 1. RoBERTa Extraction
+            in_rob = tok_rob(text, return_tensors="pt", truncation=True, max_length=512).to(device)
+            out_rob = mod_rob(**in_rob)
+            cls_rob = out_rob.last_hidden_state[:, 0, :].cpu().numpy().flatten()
             
-            # --- Extract from RoBERTa ---
-            inputs_rob = tokenizer_roberta(text, return_tensors="pt", truncation=True, max_length=512).to(device)
-            outputs_rob = model_roberta(**inputs_rob)
-            # Grab the [CLS] token (index 0)
-            cls_rob = outputs_rob.last_hidden_state[:, 0, :].cpu().numpy().flatten()
+            # 2. MentalBERT Extraction
+            in_men = tok_men(text, return_tensors="pt", truncation=True, max_length=512).to(device)
+            out_men = mod_men(**in_men)
+            cls_men = out_men.last_hidden_state[:, 0, :].cpu().numpy().flatten()
+
+            # 3. GoEmotions Extraction
+            in_emo = tok_emo(text, return_tensors="pt", truncation=True, max_length=512).to(device)
+            out_emo = mod_emo(**in_emo)
+            cls_emo = out_emo.last_hidden_state[:, 0, :].cpu().numpy().flatten()
             
-            # --- Extract from MentalBERT ---
-            inputs_men = tokenizer_mental(text, return_tensors="pt", truncation=True, max_length=512).to(device)
-            outputs_men = model_mental(**inputs_men)
-            # Grab the [CLS] token (index 0)
-            cls_men = outputs_men.last_hidden_state[:, 0, :].cpu().numpy().flatten()
-            
-            # --- THE ENSEMBLE FUSION ---
-            # Glue the two 768-dimensional arrays into one 1536-dimensional array
-            fused_embedding = np.concatenate((cls_rob, cls_men))
+            # THE TRI-BRAIN FUSION (768 + 768 + 768 = 2304 dimensions)
+            fused_embedding = np.concatenate((cls_rob, cls_men, cls_emo))
             ensemble_embeddings.append(fused_embedding)
             
-            # --- MEMORY PROTECTOR ---
-            del inputs_rob, outputs_rob, inputs_men, outputs_men
+            del in_rob, out_rob, in_men, out_men, in_emo, out_emo
             
-    # 3. Save the Master Matrix
-    print("\nExtraction complete! Saving matrix to disk...")
     final_matrix = np.vstack(ensemble_embeddings)
-    np.save(output_path, final_matrix)
+    print(f"\nExtraction complete! Raw Matrix Shape: {final_matrix.shape}")
+
+    # ==========================================
+    # PCA COMPRESSION (RAM Protector)
+    # ==========================================
+    print("\n[INITIATING PCA] Compressing array to save CPU memory...")
+    pca = PCA(n_components=0.95, random_state=42)
+    compressed_matrix = pca.fit_transform(final_matrix)
     
-    print(f"[SUCCESS] Ensemble Embeddings saved to {output_path}")
-    print(f"Final Matrix Shape: {final_matrix.shape} (Expected: {len(texts)}, 1536)")
+    new_dim = compressed_matrix.shape[1]
+    mem_saved = 100 - ((new_dim / 2304) * 100)
     
-    # Final cleanup
-    del model_roberta, model_mental
+    print(f"-> Array compressed from 2304 down to {new_dim} dimensions.")
+    print(f"-> Retained 95% of clinical data while saving {mem_saved:.1f}% RAM!")
+
+    # Save the compressed matrix
+    np.save(output_path, compressed_matrix)
+    print(f"[SUCCESS] Compressed Embeddings saved to {output_path}")
+    
+    # Cleanup
+    del mod_rob, mod_men, mod_emo
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()

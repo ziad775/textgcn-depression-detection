@@ -11,7 +11,7 @@ def main():
     start_time = time.time()
     
     # 1. Load the dataset
-    data_path = "../data/dataset1_tweets_combined.csv" 
+    data_path = "../data/dataset2_twitter_English.csv" 
     print(f"Loading data from {data_path}...")
     cleaned_df = load_and_clean_data(data_path)
     

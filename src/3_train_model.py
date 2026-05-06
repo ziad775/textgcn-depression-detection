@@ -71,7 +71,7 @@ def main():
     A_tf = tf.sparse.reorder(A_tf)
     
     # 2. Extract Real Labels
-    csv_path = "../data/dataset1_tweets_combined.csv"
+    csv_path = "../data/dataset2_twitter_English.csv"
     print(f"Extracting true labels from {csv_path}...")
     
     df = load_and_clean_data(csv_path)
@@ -88,8 +88,8 @@ def main():
     print("\nExecuting Phase 4: Initializing 5-Fold Splits...")
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
     
-    # Trackers for our final thesis metrics
-    fold_accs, fold_precs, fold_recs, fold_f1s = [], [], [], []
+    # --- NEW: Added fold_train_accs tracker ---
+    fold_accs, fold_precs, fold_recs, fold_f1s, fold_train_accs = [], [], [], [], []
     
     checkpoint_dir = "../checkpoints"
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -162,8 +162,16 @@ def main():
             # --- EVALUATE THIS FOLD ---
             model.load_weights(checkpoint_path)
             final_preds_probs = model([X_tf, A_tf], training=False)
-            test_mask_indices = np.where(test_mask)[0]
             
+            # --- NEW: Calculate final Training Metrics for this fold ---
+            train_mask_indices = np.where(train_mask)[0]
+            y_true_train = np.argmax(Y_matrix[train_mask_indices], axis=1)
+            y_pred_train = np.argmax(final_preds_probs.numpy()[train_mask_indices], axis=1)
+            final_train_acc = accuracy_score(y_true_train, y_pred_train)
+            fold_train_accs.append(final_train_acc)
+
+            # Calculate final Testing Metrics for this fold
+            test_mask_indices = np.where(test_mask)[0]
             y_true_test = np.argmax(Y_matrix[test_mask_indices], axis=1)
             y_pred_test = np.argmax(final_preds_probs.numpy()[test_mask_indices], axis=1)
             
@@ -177,7 +185,8 @@ def main():
             fold_recs.append(rec)
             fold_f1s.append(f1)
             
-            print(f"-> Fold {fold+1} Completed | F1-Score: {f1:.4f} | Accuracy: {acc:.4f}")
+            # --- NEW: Updated print to show Train Acc ---
+            print(f"-> Fold {fold+1} Completed | Train Acc: {final_train_acc:.4f} | Test Acc: {acc:.4f} | Test F1: {f1:.4f}")
 
     # ==========================================
     # 5. THE FINAL SCIENTIFIC RESULT
@@ -185,10 +194,11 @@ def main():
     print("\n==================================================")
     print("      FINAL 5-FOLD CROSS-VALIDATION METRICS       ")
     print("==================================================")
-    print(f"Accuracy:  {np.mean(fold_accs):.4f} (± {np.std(fold_accs):.4f})")
-    print(f"Precision: {np.mean(fold_precs):.4f} (± {np.std(fold_precs):.4f})")
-    print(f"Recall:    {np.mean(fold_recs):.4f} (± {np.std(fold_recs):.4f})")
-    print(f"F1-Score:  {np.mean(fold_f1s):.4f} (± {np.std(fold_f1s):.4f})")
+    print(f"Train Accuracy: {np.mean(fold_train_accs):.4f} (± {np.std(fold_train_accs):.4f})")
+    print(f"Test Accuracy:  {np.mean(fold_accs):.4f} (± {np.std(fold_accs):.4f})")
+    print(f"Test Precision: {np.mean(fold_precs):.4f} (± {np.std(fold_precs):.4f})")
+    print(f"Test Recall:    {np.mean(fold_recs):.4f} (± {np.std(fold_recs):.4f})")
+    print(f"Test F1-Score:  {np.mean(fold_f1s):.4f} (± {np.std(fold_f1s):.4f})")
     print("==================================================")
 
 if __name__ == "__main__":
