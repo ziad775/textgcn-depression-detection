@@ -83,40 +83,16 @@ class TextGCNGraph:
             p_i_j = freq / total_windows
             pmi = math.log(p_i_j / (p_i * p_j))
             
-            if pmi > 0:
+            if pmi > 0.5:
                 pmi_edges[(w1, w2)] = pmi
 
         print(f"-> Generated {len(pmi_edges)} positive Word-Word connections.")
         return pmi_edges
-
-    def build_jaccard_edges(self, threshold=0.2):
-        """
-        Calculates Jaccard Similarity to create lexical Document-Document edges.
-        """
-        print(f"Calculating Jaccard Similarity (Lexical Doc-Doc edges) with threshold {threshold}...")
-        
-        doc_sets = [set(text.split()) for text in self.df['cleaned_text']]
-        jaccard_edges = {}
-        
-        for i in range(self.num_docs):
-            for j in range(i + 1, self.num_docs):
-                set_i = doc_sets[i]
-                set_j = doc_sets[j]
-                
-                intersection = len(set_i.intersection(set_j))
-                if intersection > 0:
-                    union = len(set_i.union(set_j))
-                    jaccard = intersection / union
-                    if jaccard >= threshold:
-                        jaccard_edges[(i, j)] = jaccard
-                        
-        print(f"-> Generated {len(jaccard_edges)} positive Lexical connections.")
-        return jaccard_edges
-
+    '''
     def build_semantic_doc_edges(self, doc_embeddings, threshold=0.85):
         """
-        NEW FEATURE: Calculates Cosine Similarity between RoBERTa document embeddings.
-        Creates 'Semantic Bridges' between short texts that share meaning but lack exact words.
+        Calculates Cosine Similarity between document embeddings.
+        Creates 'Semantic Bridges' between short texts that share meaning.
         """
         print(f"Calculating Cosine Similarity (Semantic Doc-Doc edges) with threshold {threshold}...")
         
@@ -131,12 +107,45 @@ class TextGCNGraph:
         
         semantic_edges = {}
         for i, j in zip(row_indices, col_indices):
-            # Only store one direction (i < j) to match Jaccard logic and avoid duplicates
+            # Only store one direction (i < j) to avoid duplicates
             if i < j:
                 semantic_edges[(i, j)] = cos_sim_matrix[i, j]
                 
         print(f"-> Discovered {len(semantic_edges)} Semantic Bridges between documents!")
         return semantic_edges
+    '''
+    def build_semantic_doc_edges(self, doc_embeddings, top_k=5):
+        """
+        COMPRESSED FEATURE: Calculates Cosine Similarity, but uses K-Nearest Neighbors (KNN) 
+        sparsification to prevent Over-smoothing and OOM crashes on long texts.
+        """
+        print(f"Calculating Compressed Semantic Edges (Top-{top_k} Nearest Neighbors)...")
+        
+        # Calculate the cosine similarity for all pairs
+        cos_sim_matrix = cosine_similarity(doc_embeddings)
+        np.fill_diagonal(cos_sim_matrix, 0) # Prevent self-loops
+        
+        semantic_edges = {}
+        
+        # Iterate through each document
+        for i in range(self.num_docs):
+            # Get the similarity scores for document 'i'
+            sim_scores = cos_sim_matrix[i]
+            
+            # Find the indices of the Top-K highest scores
+            # np.argsort sorts ascending, so we take the last 'top_k' elements
+            top_k_indices = np.argsort(sim_scores)[-top_k:]
+            
+            for j in top_k_indices:
+                score = sim_scores[j]
+                # Filter out pure garbage connections just in case
+                if score > 0.50: 
+                    # Store ensuring i < j to avoid duplicate bidirectional edges
+                    idx_1, idx_2 = min(i, j), max(i, j)
+                    semantic_edges[(idx_1, idx_2)] = score
+                
+        print(f"-> Discovered {len(semantic_edges)} highly compressed Semantic Bridges!")
+        return semantic_edges    
 
     def get_node_id_maps(self):
         """Maps documents and words to specific integer indices."""
@@ -156,9 +165,9 @@ class TextGCNGraph:
         d_mat_inv_sqrt = sp.diags(d_inv_sqrt)
         return adj.dot(d_mat_inv_sqrt).transpose().dot(d_mat_inv_sqrt).tocsr()
 
-    def build_adjacency_matrix(self, pmi_edges, jaccard_edges, semantic_edges=None):
+    def build_adjacency_matrix(self, pmi_edges, semantic_edges=None):
         """
-        Fuses TF-IDF, PMI, Jaccard, Semantic edges, and self-loops into the master Adjacency Matrix (A).
+        Fuses TF-IDF, PMI, Semantic edges, and self-loops into the master Adjacency Matrix (A).
         """
         print("\nAssembling Master Adjacency Matrix [A]...")
         
@@ -182,29 +191,20 @@ class TextGCNGraph:
                 col.extend([id2, id1])
                 weight.extend([pmi_val, pmi_val])
             
-        # 3. Inject Jaccard (Lexical Doc <-> Doc Edges)
-        for (d1, d2), jaccard_val in jaccard_edges.items():
-            row.extend([d1, d2])
-            col.extend([d2, d1])
-            weight.extend([jaccard_val, jaccard_val])
-            
-        # 4. Inject Semantic Bridges (Meaning-based Doc <-> Doc Edges)
+        # 3. Inject Semantic Bridges (Meaning-based Doc <-> Doc Edges)
         if semantic_edges:
             for (d1, d2), sim_val in semantic_edges.items():
                 row.extend([d1, d2])
                 col.extend([d2, d1])
                 weight.extend([sim_val, sim_val])
             
-        # 5. Inject Self-Loops (Node <-> Node)
+        # 4. Inject Self-Loops (Node <-> Node)
         for i in range(self.total_nodes):
             row.append(i)
             col.append(i)
             weight.append(1.0)
             
-        # 6. Construct Sparse Matrix
-        # Note: Scipy COO matrix automatically sums duplicate entries. 
-        # If two tweets share words (Jaccard) AND share meaning (Semantic), 
-        # their edge weight will mathematically stack, making the connection even stronger!
+        # 5. Construct Sparse Matrix
         adj_matrix = sp.csr_matrix(
             (weight, (row, col)), 
             shape=(self.total_nodes, self.total_nodes)

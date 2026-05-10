@@ -79,7 +79,7 @@ def main():
     A_tf = tf.sparse.reorder(A_tf)
     
     # 2. Extract Real Labels AND Texts
-    csv_path = "../data/dataset1_tweets_combined.csv"
+    csv_path = "../data/dataset5_mixed.csv"
     print(f"Extracting true labels and text data from {csv_path}...")
     
     df = load_and_clean_data(csv_path)

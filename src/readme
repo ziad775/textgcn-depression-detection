@@ -165,7 +165,7 @@ Total Depressed Patients (Class 1): 843
 ==================================================
 
 
-3 brains epochs = 500 , with preprocessin ?????
+3 brains epochs = 500 , with preprocessin ?????  GoEmotions , Roberta ,MentalBert
 
 ==================================================
       FINAL 5-FOLD CROSS-VALIDATION METRICS
@@ -184,6 +184,29 @@ Total Undepressed Patients (Class 0): 2330
 Total Depressed Patients (Class 1): 843
   -> Guessed Right (True Positive):  539
   -> Guessed Wrong (False Negative): 304
+==================================================
+
+3 brains epochs = 500 , with preprocessin ?????  GoEmotions , Roberta ,MentalBert removed jaccard
+
+Time 20 mins
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.8931 (± 0.0105)
+Test Accuracy:  0.8449 (± 0.0169)
+Test Precision: 0.8117 (± 0.0225)
+Test Recall:    0.7754 (± 0.0253)
+Test F1-Score:  0.7896 (± 0.0224)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 2330
+  -> Guessed Right (True Negative):  2153
+  -> Guessed Wrong (False Positive): 177
+
+Total Depressed Patients (Class 1): 843
+  -> Guessed Right (True Positive):  528
+  -> Guessed Wrong (False Negative): 315
 ==================================================
 
 
@@ -223,7 +246,7 @@ Recall:    0.8109 (± 0.0163)
 F1-Score:  0.8120 (± 0.0152)
 ==================================================
 
-cosine similarity and 3 brains instead of 2 epochs = 500
+cosine similarity and 3 brains instead of 2 epochs = 500  
 
 ==================================================
       FINAL 5-FOLD CROSS-VALIDATION METRICS
@@ -243,41 +266,31 @@ Total Depressed Patients (Class 1): 500
   -> Guessed Right (True Positive):  434
   -> Guessed Wrong (False Negative): 66
 
-4 brains  MentalBERT , GoEmotions , Irony , Roberta 
+
+cosine similarity and 3 brains instead of 2 epochs = 500  removed jaccard
+Time = 13 mins
 
 ==================================================
       FINAL 5-FOLD CROSS-VALIDATION METRICS
 ==================================================
-Train Accuracy: 0.9290 (± 0.0294)
-Test Accuracy:  0.8630 (± 0.0175)
-Test Precision: 0.8631 (± 0.0184)
-Test Recall:    0.8622 (± 0.0161)
-Test F1-Score:  0.8617 (± 0.0176)
-==================================================
+Train Accuracy: 0.9373 (± 0.0493)
+Test Accuracy:  0.8690 (± 0.0171)
+Test Precision: 0.8689 (± 0.0170)
+Test Recall:    0.8685 (± 0.0177)
+Test F1-Score:  0.8678 (± 0.0173)
 
-4 brains  MentalBERT , GoEmotions , Irony , BERTweet
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 500
+  -> Guessed Right (True Negative):  436
+  -> Guessed Wrong (False Positive): 64
 
-==================================================
-      FINAL 5-FOLD CROSS-VALIDATION METRICS
-==================================================
-Train Accuracy: 0.9215 (± 0.0323)
-Test Accuracy:  0.8640 (± 0.0183)
-Test Precision: 0.8650 (± 0.0185)
-Test Recall:    0.8631 (± 0.0170)
-Test F1-Score:  0.8626 (± 0.0184)
+Total Depressed Patients (Class 1): 500
+  -> Guessed Right (True Positive):  433
+  -> Guessed Wrong (False Negative): 67
 ==================================================
 
 
-4 brains  MentalBERT , GoEmotions , Irony , Roberta epochs = 300
 
-==================================================
-      FINAL 5-FOLD CROSS-VALIDATION METRICS
-==================================================
-Train Accuracy: 0.9013 (± 0.0426)
-Test Accuracy:  0.8540 (± 0.0208)
-Test Precision: 0.8545 (± 0.0213)
-Test Recall:    0.8514 (± 0.0201)
-Test F1-Score:  0.8522 (± 0.0205)
 
 Dataset 3 : learing rate = 0.02
 
@@ -299,6 +312,27 @@ Accuracy:  0.9077 (± 0.0113)
 Precision: 0.8954 (± 0.0139)
 Recall:    0.8810 (± 0.0292)
 F1-Score:  0.8860 (± 0.0190)
+==================================================
+
+learning rate = 0.001 epochs = 500
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9329 (± 0.0184)
+Test Accuracy:  0.9417 (± 0.0109)
+Test Precision: 0.9400 (± 0.0135)
+Test Recall:    0.9174 (± 0.0188)
+Test F1-Score:  0.9275 (± 0.0155)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 932
+  -> Guessed Right (True Negative):  909
+  -> Guessed Wrong (False Positive): 23
+
+Total Depressed Patients (Class 1): 390
+  -> Guessed Right (True Positive):  336
+  -> Guessed Wrong (False Negative): 54
 ==================================================
 
 Dataset 4 : learning rate = 0.001
@@ -323,6 +357,27 @@ Recall:    0.8760 (± 0.0099)
 F1-Score:  0.8801 (± 0.0104)
 ==================================================
 
+3 models , cosine edge oinly
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.8930 (± 0.0024)
+Test Accuracy:  0.9045 (± 0.0072)
+Test Precision: 0.8945 (± 0.0042)
+Test Recall:    0.8888 (± 0.0117)
+Test F1-Score:  0.8912 (± 0.0072)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 644
+  -> Guessed Right (True Negative):  543
+  -> Guessed Wrong (False Positive): 101
+
+Total Depressed Patients (Class 1): 1293
+  -> Guessed Right (True Positive):  1209
+  -> Guessed Wrong (False Negative): 84
+==================================================
+
 
 Dataset 5 : learning rate 0.02
 
@@ -340,6 +395,27 @@ Accuracy:  0.8518 (± 0.0276)
 Precision: 0.8532 (± 0.0288)
 Recall:    0.8499 (± 0.0275)
 F1-Score:  0.8507 (± 0.0276)
+==================================================
+
+3 models , cosine edge oinly
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.8958 (± 0.0044)
+Test Accuracy:  0.8911 (± 0.0112)
+Test Precision: 0.8925 (± 0.0110)
+Test Recall:    0.8893 (± 0.0120)
+Test F1-Score:  0.8903 (± 0.0116)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 1480
+  -> Guessed Right (True Negative):  1360
+  -> Guessed Wrong (False Positive): 120
+
+Total Depressed Patients (Class 1): 1340
+  -> Guessed Right (True Positive):  1153
+  -> Guessed Wrong (False Negative): 187
 ==================================================
 
 
