@@ -210,6 +210,26 @@ Total Depressed Patients (Class 1): 843
 ==================================================
 
 
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.8988 (± 0.0139)
+Test Accuracy:  0.8468 (± 0.0160)
+Test Precision: 0.8142 (± 0.0159)
+Test Recall:    0.7764 (± 0.0274)
+Test F1-Score:  0.7913 (± 0.0239)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 2330
+  -> Guessed Right (True Negative):  2160
+  -> Guessed Wrong (False Positive): 170
+
+Total Depressed Patients (Class 1): 843
+  -> Guessed Right (True Positive):  527
+  -> Guessed Wrong (False Negative): 316
+==================================================
+
+
 
 Dataset 2 : learning rate 0.001 patience = 30
 
@@ -290,6 +310,46 @@ Total Depressed Patients (Class 1): 500
 ==================================================
 
 
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9440 (± 0.0478)
+Test Accuracy:  0.8690 (± 0.0193)
+Test Precision: 0.8687 (± 0.0198)
+Test Recall:    0.8701 (± 0.0187)
+Test F1-Score:  0.8682 (± 0.0190)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 500
+  -> Guessed Right (True Negative):  443
+  -> Guessed Wrong (False Positive): 57
+
+Total Depressed Patients (Class 1): 500
+  -> Guessed Right (True Positive):  426
+  -> Guessed Wrong (False Negative): 74
+==================================================
+
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9460 (± 0.0396)
+Test Accuracy:  0.8720 (± 0.0157)
+Test Precision: 0.8715 (± 0.0159)
+Test Recall:    0.8724 (± 0.0156)
+Test F1-Score:  0.8711 (± 0.0156)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 500
+  -> Guessed Right (True Negative):  438
+  -> Guessed Wrong (False Positive): 62
+
+Total Depressed Patients (Class 1): 500
+  -> Guessed Right (True Positive):  434
+  -> Guessed Wrong (False Negative): 66
+==================================================
+
+
 
 
 Dataset 3 : learing rate = 0.02
@@ -335,6 +395,24 @@ Total Depressed Patients (Class 1): 390
   -> Guessed Wrong (False Negative): 54
 ==================================================
 
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9593 (± 0.0223)
+Test Accuracy:  0.9463 (± 0.0085)
+Test Precision: 0.9403 (± 0.0129)
+Test Recall:    0.9298 (± 0.0139)
+Test F1-Score:  0.9344 (± 0.0105)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 932
+  -> Guessed Right (True Negative):  903
+  -> Guessed Wrong (False Positive): 29
+
+Total Depressed Patients (Class 1): 390
+  -> Guessed Right (True Positive):  348
+  -> Guessed Wrong (False Negative): 42
+==================================================
+
 Dataset 4 : learning rate = 0.001
 
 ==================================================
@@ -362,20 +440,39 @@ F1-Score:  0.8801 (± 0.0104)
 ==================================================
       FINAL 5-FOLD CROSS-VALIDATION METRICS
 ==================================================
-Train Accuracy: 0.8930 (± 0.0024)
-Test Accuracy:  0.9045 (± 0.0072)
-Test Precision: 0.8945 (± 0.0042)
-Test Recall:    0.8888 (± 0.0117)
-Test F1-Score:  0.8912 (± 0.0072)
+Train Accuracy: 0.9266 (± 0.0076)
+Test Accuracy:  0.9262 (± 0.0162)
+Test Precision: 0.9235 (± 0.0155)
+Test Recall:    0.9091 (± 0.0184)
+Test F1-Score:  0.9155 (± 0.0167)
 
 --- ABSOLUTE CLASSIFICATION COUNTS ---
 Total Undepressed Patients (Class 0): 644
-  -> Guessed Right (True Negative):  543
-  -> Guessed Wrong (False Positive): 101
+  -> Guessed Right (True Negative):  552
+  -> Guessed Wrong (False Positive): 92
 
 Total Depressed Patients (Class 1): 1293
-  -> Guessed Right (True Positive):  1209
-  -> Guessed Wrong (False Negative): 84
+  -> Guessed Right (True Positive):  1242
+  -> Guessed Wrong (False Negative): 51
+==================================================
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9444 (± 0.0032)
+Test Accuracy:  0.9350 (± 0.0177)
+Test Precision: 0.9262 (± 0.0201)
+Test Recall:    0.9277 (± 0.0183)
+Test F1-Score:  0.9269 (± 0.0191)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 644
+  -> Guessed Right (True Negative):  583
+  -> Guessed Wrong (False Positive): 61
+
+Total Depressed Patients (Class 1): 1293
+  -> Guessed Right (True Positive):  1228
+  -> Guessed Wrong (False Negative): 65
 ==================================================
 
 
@@ -416,6 +513,25 @@ Total Undepressed Patients (Class 0): 1480
 Total Depressed Patients (Class 1): 1340
   -> Guessed Right (True Positive):  1153
   -> Guessed Wrong (False Negative): 187
+==================================================
+
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9159 (± 0.0076)
+Test Accuracy:  0.9000 (± 0.0122)
+Test Precision: 0.9007 (± 0.0131)
+Test Recall:    0.8992 (± 0.0120)
+Test F1-Score:  0.8995 (± 0.0123)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 1480
+  -> Guessed Right (True Negative):  1346
+  -> Guessed Wrong (False Positive): 134
+
+Total Depressed Patients (Class 1): 1340
+  -> Guessed Right (True Positive):  1192
+  -> Guessed Wrong (False Negative): 148
 ==================================================
 
 

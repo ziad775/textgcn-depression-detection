@@ -25,12 +25,38 @@ class TextGCNGraph:
             max_df=0.85    
         )
         
-    def build_tfidf_edges(self):
+    def build_tfidf_edges(self, top_k_words=30):
         """
-        Calculates TF-IDF to create edges between Word Nodes and Document Nodes.
+        COMPRESSED FEATURE: Calculates TF-IDF but applies Top-K Sparsification.
         """
-        print("Calculating TF-IDF (Word-Document edges)...")
-        self.tfidf_matrix = self.vectorizer.fit_transform(self.df['cleaned_text'])
+        print(f"Calculating Compressed TF-IDF (Max {top_k_words} Word edges per Document)...")
+        
+        raw_tfidf_matrix = self.vectorizer.fit_transform(self.df['cleaned_text'])
+        
+        new_data = []
+        new_indices = []
+        new_indptr = [0]
+        
+        for i in range(raw_tfidf_matrix.shape[0]):
+            start = raw_tfidf_matrix.indptr[i]
+            end = raw_tfidf_matrix.indptr[i+1]
+            data_slice = raw_tfidf_matrix.data[start:end]
+            idx_slice = raw_tfidf_matrix.indices[start:end]
+            
+            if len(data_slice) > top_k_words:
+                best_k_indices = np.argsort(data_slice)[-top_k_words:]
+                new_data.extend(data_slice[best_k_indices])
+                new_indices.extend(idx_slice[best_k_indices])
+            else:
+                new_data.extend(data_slice)
+                new_indices.extend(idx_slice)
+                
+            new_indptr.append(len(new_data))
+            
+        self.tfidf_matrix = sp.csr_matrix(
+            (new_data, new_indices, new_indptr), 
+            shape=raw_tfidf_matrix.shape
+        )
         
         self.vocab = self.vectorizer.get_feature_names_out()
         self.num_vocab = len(self.vocab)
@@ -40,6 +66,13 @@ class TextGCNGraph:
         print(f"-> Document Nodes: {self.num_docs}")
         print(f"-> Word Nodes:     {self.num_vocab}")
         print(f"-> Total Nodes:    {self.total_nodes}")
+        print(f"-> Edges successfully pruned! Retained the highest signal connections.")
+        
+        # --- DEBUG PRINT BLOCK FOR TF-IDF ---
+        if new_data:
+            print(f"   [DEBUG] TF-IDF Weights | Min: {np.min(new_data):.4f} | Max: {np.max(new_data):.4f} | Mean: {np.mean(new_data):.4f}")
+            print(f"   [DEBUG] TF-IDF Sample: {new_data[:5]}")
+        # ------------------------------------
         
         return self.tfidf_matrix
 
@@ -87,64 +120,46 @@ class TextGCNGraph:
                 pmi_edges[(w1, w2)] = pmi
 
         print(f"-> Generated {len(pmi_edges)} positive Word-Word connections.")
+        
+        # --- DEBUG PRINT BLOCK FOR PMI ---
+        if pmi_edges:
+            pmi_vals = list(pmi_edges.values())
+            print(f"   [DEBUG] PMI Weights    | Min: {np.min(pmi_vals):.4f} | Max: {np.max(pmi_vals):.4f} | Mean: {np.mean(pmi_vals):.4f}")
+            print(f"   [DEBUG] PMI Sample: {pmi_vals[:5]}")
+        # ---------------------------------
+        
         return pmi_edges
-    '''
-    def build_semantic_doc_edges(self, doc_embeddings, threshold=0.85):
-        """
-        Calculates Cosine Similarity between document embeddings.
-        Creates 'Semantic Bridges' between short texts that share meaning.
-        """
-        print(f"Calculating Cosine Similarity (Semantic Doc-Doc edges) with threshold {threshold}...")
-        
-        # Calculate the cosine similarity for all pairs of documents at once
-        cos_sim_matrix = cosine_similarity(doc_embeddings)
-        
-        # Prevent self-loops (handled later by identity matrix)
-        np.fill_diagonal(cos_sim_matrix, 0)
-        
-        # Find all coordinates where the similarity is greater than our strict threshold
-        row_indices, col_indices = np.where(cos_sim_matrix >= threshold)
-        
-        semantic_edges = {}
-        for i, j in zip(row_indices, col_indices):
-            # Only store one direction (i < j) to avoid duplicates
-            if i < j:
-                semantic_edges[(i, j)] = cos_sim_matrix[i, j]
-                
-        print(f"-> Discovered {len(semantic_edges)} Semantic Bridges between documents!")
-        return semantic_edges
-    '''
+
     def build_semantic_doc_edges(self, doc_embeddings, top_k=5):
         """
-        COMPRESSED FEATURE: Calculates Cosine Similarity, but uses K-Nearest Neighbors (KNN) 
-        sparsification to prevent Over-smoothing and OOM crashes on long texts.
+        COMPRESSED FEATURE: Calculates Cosine Similarity, but uses K-Nearest Neighbors (KNN).
         """
         print(f"Calculating Compressed Semantic Edges (Top-{top_k} Nearest Neighbors)...")
         
-        # Calculate the cosine similarity for all pairs
         cos_sim_matrix = cosine_similarity(doc_embeddings)
-        np.fill_diagonal(cos_sim_matrix, 0) # Prevent self-loops
+        np.fill_diagonal(cos_sim_matrix, 0) 
         
         semantic_edges = {}
         
-        # Iterate through each document
         for i in range(self.num_docs):
-            # Get the similarity scores for document 'i'
             sim_scores = cos_sim_matrix[i]
-            
-            # Find the indices of the Top-K highest scores
-            # np.argsort sorts ascending, so we take the last 'top_k' elements
             top_k_indices = np.argsort(sim_scores)[-top_k:]
             
             for j in top_k_indices:
                 score = sim_scores[j]
-                # Filter out pure garbage connections just in case
                 if score > 0.50: 
-                    # Store ensuring i < j to avoid duplicate bidirectional edges
                     idx_1, idx_2 = min(i, j), max(i, j)
                     semantic_edges[(idx_1, idx_2)] = score
                 
         print(f"-> Discovered {len(semantic_edges)} highly compressed Semantic Bridges!")
+        
+        # --- DEBUG PRINT BLOCK FOR SEMANTIC EDGES ---
+        if semantic_edges:
+            sem_vals = list(semantic_edges.values())
+            print(f"   [DEBUG] Semantic Weights| Min: {np.min(sem_vals):.4f} | Max: {np.max(sem_vals):.4f} | Mean: {np.mean(sem_vals):.4f}")
+            print(f"   [DEBUG] Semantic Sample: {sem_vals[:5]}")
+        # --------------------------------------------
+        
         return semantic_edges    
 
     def get_node_id_maps(self):
@@ -174,7 +189,7 @@ class TextGCNGraph:
         row, col, weight = [], [], []
         doc_ids, word_ids = self.get_node_id_maps()
         
-        # 1. Inject TF-IDF (Doc <-> Word Edges)
+        # 1. Inject TF-IDF
         coo_tfidf = self.tfidf_matrix.tocoo()
         for d, w, val in zip(coo_tfidf.row, coo_tfidf.col, coo_tfidf.data):
             word_idx = w + self.num_docs 
@@ -182,7 +197,7 @@ class TextGCNGraph:
             col.extend([word_idx, d])
             weight.extend([val, val])
 
-        # 2. Inject PMI (Word <-> Word Edges)
+        # 2. Inject PMI
         for (w1, w2), pmi_val in pmi_edges.items():
             if w1 in word_ids and w2 in word_ids:
                 id1 = word_ids[w1]
@@ -191,14 +206,14 @@ class TextGCNGraph:
                 col.extend([id2, id1])
                 weight.extend([pmi_val, pmi_val])
             
-        # 3. Inject Semantic Bridges (Meaning-based Doc <-> Doc Edges)
+        # 3. Inject Semantic Bridges
         if semantic_edges:
             for (d1, d2), sim_val in semantic_edges.items():
                 row.extend([d1, d2])
                 col.extend([d2, d1])
                 weight.extend([sim_val, sim_val])
             
-        # 4. Inject Self-Loops (Node <-> Node)
+        # 4. Inject Self-Loops
         for i in range(self.total_nodes):
             row.append(i)
             col.append(i)
@@ -210,7 +225,15 @@ class TextGCNGraph:
             shape=(self.total_nodes, self.total_nodes)
         )
         
+        # --- DEBUG PRINT BLOCK FOR RAW MATRIX ---
+        print(f"   [DEBUG] RAW Master Matrix Weights | Min: {adj_matrix.data.min():.4f} | Max: {adj_matrix.data.max():.4f}")
+        # ----------------------------------------
+        
         normalized_adj = self.normalize_adjacency(adj_matrix)
+        
+        # --- DEBUG PRINT BLOCK FOR NORMALIZED MATRIX ---
+        print(f"   [DEBUG] NORMALIZED Matrix Weights | Min: {normalized_adj.data.min():.6f} | Max: {normalized_adj.data.max():.6f}")
+        # -----------------------------------------------
         
         print(f"-> Master Adjacency Matrix Built and Normalized! Shape: {normalized_adj.shape}")
         print(f"-> Total non-zero edges recorded: {normalized_adj.nnz}")
