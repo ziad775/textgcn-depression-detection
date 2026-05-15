@@ -249,5 +249,144 @@ def main():
     for idx in range(preview_count):
         print(f"Missed Tweet #{idx+1}: {error_df.iloc[idx]['Tweet_Text']}")
 
+    # ... [This goes immediately after your SNEAK PEEK loop at the end of main()] ...
+    
+    from gnn_explainer import TextGCNExplainer, explain_patient_diagnosis
+
+    print("\n==================================================")
+    print("      XAI: EXPLAINING A SPECIFIC PREDICTION       ")
+    print("==================================================")
+    
+    # 1. Load the Vocabulary to translate Word Nodes back to English
+    # (Make sure you save your vectorizer.get_feature_names_out() to this path in Step 2!)
+    try:
+        vocab_list = np.load("../data/vocab.npy", allow_pickle=True)
+    except FileNotFoundError:
+        print("[WARNING] Could not find vocab.npy. Word nodes will show as raw indices.")
+        vocab_list = None
+
+    # 2. The Translator Function
+    def translate_node(node_idx):
+        if node_idx < num_docs:
+            # It is a Document Node! Grab a preview of the actual tweet text
+            tweet_preview = original_texts[node_idx][:60].replace('\n', ' ')
+            return f"[Tweet {node_idx}]: \"{tweet_preview}...\""
+        else:
+            # It is a Word Node! Subtract num_docs to get the true vocab index
+            word_idx = node_idx - num_docs
+            if vocab_list is not None and word_idx < len(vocab_list):
+                return f"[Clinical Word]: '{vocab_list[word_idx]}'"
+            else:
+                return f"[Word Index]: {word_idx}"
+
+    # 3. Initialize the Explainer
+    # We pass 'model' which contains the trained weights from the final fold
+    print("Initializing Explainer on trained architecture...")
+    explainer = TextGCNExplainer(trained_model=model, 
+                                 num_features=X_tf.shape[1], 
+                                 num_edges=len(A_tf.values))
+
+    # 4. Pick a patient to explain (Let's use the very first False Negative from your error list!)
+    if len(false_negatives_list) > 0:
+        target_patient_idx = false_negatives_list[0]["Doc_ID"]
+        target_class = 1 # We know it was supposed to be Depressed (Class 1)
+        
+        print(f"\n[XAI] Analyzing why the model missed Patient {target_patient_idx}...")
+        
+        edge_importance, feature_importance = explain_patient_diagnosis(
+            explainer=explainer, 
+            x=X_tf, 
+            a_sparse=A_tf, 
+            target_node_idx=target_patient_idx, 
+            target_class=target_class, 
+            epochs=200
+        )
+
+    print("      XAI: EXTRACTING GLOBAL CLINICAL MARKERS     ")
+    print("==================================================")
+    
+    print("Initializing Explainer on trained architecture...")
+    explainer = TextGCNExplainer(trained_model=model, 
+                                 num_features=X_tf.shape[1], 
+                                 num_edges=len(A_tf.values))
+
+    # 1. Find all TRUE POSITIVES (Model correctly guessed Class 1)
+    true_positives = []
+    for i, doc_id in enumerate(test_mask_indices):
+        if y_true_test[i] == 1 and y_pred_test[i] == 1:
+            true_positives.append(doc_id)
+
+    if len(true_positives) > 0:
+        # 2. Sample 15 patients to save computation time
+        # (Running 200 epochs on 1,000 patients would take hours)
+        import random
+        sample_size = min(15, len(true_positives))
+        target_patients = random.sample(true_positives, sample_size)
+        
+        print(f"\n[XAI] Running Global Aggregation on {sample_size} True Positive patients...")
+        
+        # Array to hold the sum of all edge importances
+        global_edge_importance = np.zeros(len(A_tf.values))
+        
+        for idx, patient_idx in enumerate(target_patients):
+            print(f" -> Analyzing Patient {idx+1}/{sample_size} (Node {patient_idx})...")
+            
+            edge_imp, _ = explain_patient_diagnosis(
+                explainer=explainer, 
+                x=X_tf, 
+                a_sparse=A_tf, 
+                target_node_idx=patient_idx, 
+                target_class=1, 
+                epochs=100 # Reduced epochs slightly for faster loop
+            )
+            global_edge_importance += edge_imp
+            
+        # 3. Calculate the Average Importance across the sample
+        global_edge_importance /= sample_size
+        
+        print("\n[GLOBAL ANALYSIS] The Top 10 Universal Markers for Depression in this Fold:")
+        top_k = 10
+        global_critical_edges = np.argsort(global_edge_importance)[-top_k:][::-1]
+
+        for edge_idx in global_critical_edges:
+            source_id = A_tf.indices[edge_idx][0].numpy()
+            target_id = A_tf.indices[edge_idx][1].numpy()
+            weight = global_edge_importance[edge_idx]
+            
+            source_text = translate_node(source_id)
+            target_text = translate_node(target_id)
+            
+            print(f"-> {source_text}  <===(Avg Score: {weight:.4f})===>  {target_text}")
+    else:
+        print("No True Positives available in this fold for global analysis.")
+    print("\n[ANALYSIS] Hunting for the strongest Cosine Similarity (Doc-Doc) Bridges:")
+    
+    # We only care about edges where BOTH the source and target are Documents (IDs < num_docs)
+    cosine_edges = []
+    for edge_idx in range(len(global_edge_importance)):
+        source_id = A_tf.indices[edge_idx][0].numpy()
+        target_id = A_tf.indices[edge_idx][1].numpy()
+        
+        # If both nodes are documents, it's a Cosine edge!
+        if source_id < num_docs and target_id < num_docs:
+            # Only keep the ones that actually have some mathematical weight
+            if global_edge_importance[edge_idx] > 0.01: 
+                cosine_edges.append((edge_idx, global_edge_importance[edge_idx]))
+                
+    # Sort them by highest score
+    cosine_edges.sort(key=lambda x: x[1], reverse=True)
+    
+    # Print the Top 5 Semantic Bridges
+    top_cosine = min(5, len(cosine_edges))
+    for i in range(top_cosine):
+        edge_idx, weight = cosine_edges[i]
+        source_id = A_tf.indices[edge_idx][0].numpy()
+        target_id = A_tf.indices[edge_idx][1].numpy()
+        
+        source_text = translate_node(source_id)
+        target_text = translate_node(target_id)
+        
+        print(f"-> {source_text}  <===(Semantic Bridge Score: {weight:.4f})===>  {target_text}")        
+
 if __name__ == "__main__":
     main()

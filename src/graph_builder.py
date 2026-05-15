@@ -59,6 +59,7 @@ class TextGCNGraph:
         )
         
         self.vocab = self.vectorizer.get_feature_names_out()
+        np.save("../data/vocab.npy", self.vocab)
         self.num_vocab = len(self.vocab)
         self.total_nodes = self.num_docs + self.num_vocab
         

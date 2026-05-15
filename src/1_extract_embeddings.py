@@ -31,7 +31,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Executing on device: {device}")
     
-    data_path = "../data/dataset4_reddit.csv"
+    data_path = "../data/dataset5_mixed.csv"
     output_path = "../data/doc_embeddings.npy"
     
     print(f"Loading and cleaning data from {data_path}...")
