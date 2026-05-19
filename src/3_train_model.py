@@ -30,20 +30,52 @@ def masked_accuracy(y_true, y_pred, mask):
     accuracy_all *= mask
     return tf.reduce_mean(accuracy_all)
 
+# ==========================================
+# LIME-STYLE FEATURE ATTRIBUTION EXPLAINER
+# ==========================================
+def extract_lime_style_attributions(model, X_tf, A_tf, target_node_idx, target_class, vocab_list, num_docs):
+    """
+    Mimics LIME/SHAP by calculating the directional Gradient * Input attribution
+    for every word node connected to the target document.
+    """
+    with tf.GradientTape() as tape:
+        tape.watch(A_tf.values) # Watch the sparse adjacency weights
+        predictions = model([X_tf, A_tf], training=False)
+        target_prob = predictions[target_node_idx, target_class]
+        
+    edge_gradients = tape.gradient(target_prob, A_tf.values)
+    attributions = edge_gradients * A_tf.values
+    
+    indices = A_tf.indices.numpy()
+    attributions_np = attributions.numpy()
+    
+    word_contributions = []
+    for idx in range(len(indices)):
+        source, target = indices[idx]
+        
+        # Check if the edge starts at our patient and goes to a Word Node
+        if source == target_node_idx and target >= num_docs:
+            word_idx = target - num_docs
+            word_str = vocab_list[word_idx] if vocab_list is not None else f"Word_{word_idx}"
+            impact_score = attributions_np[idx]
+            
+            # Only keep words that actually had a non-zero impact
+            if abs(impact_score) > 1e-6:
+                word_contributions.append((word_str, impact_score))
+                
+    # Sort from highest positive impact to highest negative impact
+    word_contributions.sort(key=lambda x: x[1], reverse=True)
+    return word_contributions, target_prob.numpy()
+
+# ==========================================
+# MAIN EXECUTION PIPELINE
+# ==========================================
 def main():
     print("=== STEP 3: Model Training (Tri-Brain Graph) ===")
     
-    # ==========================================
     # THE MASTER TOGGLE SWITCH
-    # ==========================================
-    # Set to True to apply the Minority Penalty (Better Recall).
-    # Set to False to run standard cross-entropy (Better Precision).
     ENABLE_CLASS_WEIGHTS = False
-    
-    # Optional: If ENABLE_CLASS_WEIGHTS is True, you can manually override the minority weight here. 
-    # Set to None to let the algorithm calculate it automatically.
     MANUAL_MINORITY_WEIGHT = None
-    # ==========================================
     
     print("Loading pre-computed X and A matrices...")
     doc_features = np.load("../data/doc_embeddings.npy")
@@ -84,7 +116,6 @@ def main():
     
     df = load_and_clean_data(csv_path)
     raw_labels = df['label'].values 
-    
     original_texts = df['cleaned_text'].astype(str).tolist()
     
     doc_labels = tf.one_hot(raw_labels, depth=2).numpy()
@@ -92,33 +123,25 @@ def main():
     Y_matrix = np.vstack([doc_labels, word_labels])
     Y_tf = tf.convert_to_tensor(Y_matrix, dtype=tf.float32)
 
-    # ==========================================
-    # PHASE 3.5: DYNAMIC CLASS WEIGHTING
-    # ==========================================
+    # 3.5 DYNAMIC CLASS WEIGHTING
     print("\n[ANTI-BIAS PROTOCOL] Checking Class Weights Configuration...")
     if ENABLE_CLASS_WEIGHTS:
         unique_classes = np.unique(raw_labels)
         calculated_weights = compute_class_weight('balanced', classes=unique_classes, y=raw_labels)
-        
         if MANUAL_MINORITY_WEIGHT is not None:
             calculated_weights[1] = MANUAL_MINORITY_WEIGHT
-            
         class_weights_tf = tf.convert_to_tensor(calculated_weights, dtype=tf.float32)
         print(f"-> Class Weights ENABLED: [Class 0: {calculated_weights[0]:.4f}, Class 1: {calculated_weights[1]:.4f}]")
     else:
-        # If disabled, feed 1.0 to both classes (mathematically neutral)
         class_weights_tf = tf.convert_to_tensor([1.0, 1.0], dtype=tf.float32)
         print("-> Class Weights DISABLED: Model will use standard 1.0 weight for all classes.")
 
-    # ==========================================
-    # PHASE 4: 5-FOLD CROSS-VALIDATION
-    # ==========================================
+    # 4. 5-FOLD CROSS-VALIDATION
     print("\nExecuting Phase 4: Initializing 5-Fold Splits...")
     kf = KFold(n_splits=5, shuffle=True, random_state=42)
     
     fold_accs, fold_precs, fold_recs, fold_f1s, fold_train_accs = [], [], [], [], []
     total_cm = np.zeros((2, 2), dtype=int)
-    
     false_negatives_list = []
     
     checkpoint_dir = "../checkpoints"
@@ -128,7 +151,7 @@ def main():
     with tf.device('/CPU:0'):
         for fold, (train_idx, test_idx) in enumerate(kf.split(np.arange(num_docs))):
             print(f"\n==================================================")
-            print(f"              STARTING FOLD {fold + 1} OF 5")
+            print(f"            STARTING FOLD {fold + 1} OF 5")
             print(f"==================================================")
             
             tf.keras.backend.clear_session()
@@ -227,12 +250,10 @@ def main():
     print(f"Test F1-Score:  {np.mean(fold_f1s):.4f} (± {np.std(fold_f1s):.4f})")
     
     tn, fp, fn, tp = total_cm.ravel()
-    
     print("\n--- ABSOLUTE CLASSIFICATION COUNTS ---")
     print(f"Total Undepressed Patients (Class 0): {tn + fp}")
     print(f"  -> Guessed Right (True Negative):  {tn}")
     print(f"  -> Guessed Wrong (False Positive): {fp} ")
-    
     print(f"\nTotal Depressed Patients (Class 1): {fn + tp}")
     print(f"  -> Guessed Right (True Positive):  {tp} ")
     print(f"  -> Guessed Wrong (False Negative): {fn} ")
@@ -243,150 +264,83 @@ def main():
     error_path = "../data/error_analysis_false_negatives.csv"
     error_df.to_csv(error_path, index=False)
     print(f"Successfully saved all {len(error_df)} False Negatives to: {error_path}")
-    
-    print("\n--- SNEAK PEEK: 5 Tweets the Model Missed ---")
-    preview_count = min(5, len(error_df))
-    for idx in range(preview_count):
-        print(f"Missed Tweet #{idx+1}: {error_df.iloc[idx]['Tweet_Text']}")
 
-    # ... [This goes immediately after your SNEAK PEEK loop at the end of main()] ...
-    
-    from gnn_explainer import TextGCNExplainer, explain_patient_diagnosis
-
+    # ==========================================
+    # LIME-STYLE EXPLAINABLE AI EXECUTION
+    # ==========================================
     print("\n==================================================")
-    print("      XAI: EXPLAINING A SPECIFIC PREDICTION       ")
+    print("      XAI: LIME-STYLE FEATURE ATTRIBUTION         ")
     print("==================================================")
     
-    # 1. Load the Vocabulary to translate Word Nodes back to English
-    # (Make sure you save your vectorizer.get_feature_names_out() to this path in Step 2!)
     try:
         vocab_list = np.load("../data/vocab.npy", allow_pickle=True)
     except FileNotFoundError:
         print("[WARNING] Could not find vocab.npy. Word nodes will show as raw indices.")
         vocab_list = None
 
-    # 2. The Translator Function
-    def translate_node(node_idx):
-        if node_idx < num_docs:
-            # It is a Document Node! Grab a preview of the actual tweet text
-            tweet_preview = original_texts[node_idx][:60].replace('\n', ' ')
-            return f"[Tweet {node_idx}]: \"{tweet_preview}...\""
-        else:
-            # It is a Word Node! Subtract num_docs to get the true vocab index
-            word_idx = node_idx - num_docs
-            if vocab_list is not None and word_idx < len(vocab_list):
-                return f"[Clinical Word]: '{vocab_list[word_idx]}'"
-            else:
-                return f"[Word Index]: {word_idx}"
-
-    # 3. Initialize the Explainer
-    # We pass 'model' which contains the trained weights from the final fold
-    print("Initializing Explainer on trained architecture...")
-    explainer = TextGCNExplainer(trained_model=model, 
-                                 num_features=X_tf.shape[1], 
-                                 num_edges=len(A_tf.values))
-
-    # 4. Pick a patient to explain (Let's use the very first False Negative from your error list!)
-    if len(false_negatives_list) > 0:
-        target_patient_idx = false_negatives_list[0]["Doc_ID"]
-        target_class = 1 # We know it was supposed to be Depressed (Class 1)
-        
-        print(f"\n[XAI] Analyzing why the model missed Patient {target_patient_idx}...")
-        
-        edge_importance, feature_importance = explain_patient_diagnosis(
-            explainer=explainer, 
-            x=X_tf, 
-            a_sparse=A_tf, 
-            target_node_idx=target_patient_idx, 
-            target_class=target_class, 
-            epochs=200
-        )
-
-    print("      XAI: EXTRACTING GLOBAL CLINICAL MARKERS     ")
-    print("==================================================")
+    # Find True Positives to explain
+    true_positives = [i for i, doc_id in enumerate(test_mask_indices) if y_true_test[i] == 1 and y_pred_test[i] == 1]
     
-    print("Initializing Explainer on trained architecture...")
-    explainer = TextGCNExplainer(trained_model=model, 
-                                 num_features=X_tf.shape[1], 
-                                 num_edges=len(A_tf.values))
-
-    # 1. Find all TRUE POSITIVES (Model correctly guessed Class 1)
-    true_positives = []
-    for i, doc_id in enumerate(test_mask_indices):
-        if y_true_test[i] == 1 and y_pred_test[i] == 1:
-            true_positives.append(doc_id)
-
     if len(true_positives) > 0:
-        # 2. Sample 15 patients to save computation time
-        # (Running 200 epochs on 1,000 patients would take hours)
+        # 1. LOCAL LIME ANALYSIS (Explain a single patient)
+        target_patient_idx = test_mask_indices[true_positives[0]]
+        print(f"\n[LOCAL LIME] Analyzing Patient Node {target_patient_idx}...")
+        print(f"Original Tweet: \"{original_texts[target_patient_idx]}\"")
+        
+        attributions, prob = extract_lime_style_attributions(
+            model=model, X_tf=X_tf, A_tf=A_tf, target_node_idx=target_patient_idx, 
+            target_class=1, vocab_list=vocab_list, num_docs=num_docs
+        )
+        
+        print(f"Prediction: Depressed (Probability: {prob:.4f})")
+        print("\nTop Attributions driving this prediction:")
+        
+        positive_drivers = [x for x in attributions if x[1] > 0][:5]
+        negative_drivers = [x for x in attributions if x[1] < 0][-5:]
+        
+        for word, score in positive_drivers:
+            print(f"  [+] {score:+.4f} Contribution: '{word}' (Pushed TOWARD Depressed)")
+        print("  ...")
+        for word, score in negative_drivers:
+            print(f"  [-] {score:+.4f} Contribution: '{word}' (Pushed TOWARD Non-Depressed)")
+            
+        # 2. GLOBAL LIME ANALYSIS (Average attributions across patients)
         import random
-        sample_size = min(15, len(true_positives))
-        target_patients = random.sample(true_positives, sample_size)
+        sample_size = min(20, len(true_positives))
+        sampled_indices = random.sample(true_positives, sample_size)
         
-        print(f"\n[XAI] Running Global Aggregation on {sample_size} True Positive patients...")
+        print(f"\n==================================================")
+        print(f"[GLOBAL LIME] Averaging Directional Saliency across {sample_size} True Positives...")
         
-        # Array to hold the sum of all edge importances
-        global_edge_importance = np.zeros(len(A_tf.values))
-        
-        for idx, patient_idx in enumerate(target_patients):
-            print(f" -> Analyzing Patient {idx+1}/{sample_size} (Node {patient_idx})...")
-            
-            edge_imp, _ = explain_patient_diagnosis(
-                explainer=explainer, 
-                x=X_tf, 
-                a_sparse=A_tf, 
-                target_node_idx=patient_idx, 
-                target_class=1, 
-                epochs=100 # Reduced epochs slightly for faster loop
+        global_word_scores = {}
+        for i in sampled_indices:
+            pat_idx = test_mask_indices[i]
+            attrs, _ = extract_lime_style_attributions(
+                model=model, X_tf=X_tf, A_tf=A_tf, target_node_idx=pat_idx, 
+                target_class=1, vocab_list=vocab_list, num_docs=num_docs
             )
-            global_edge_importance += edge_imp
-            
-        # 3. Calculate the Average Importance across the sample
-        global_edge_importance /= sample_size
-        
-        print("\n[GLOBAL ANALYSIS] The Top 10 Universal Markers for Depression in this Fold:")
-        top_k = 10
-        global_critical_edges = np.argsort(global_edge_importance)[-top_k:][::-1]
-
-        for edge_idx in global_critical_edges:
-            source_id = A_tf.indices[edge_idx][0].numpy()
-            target_id = A_tf.indices[edge_idx][1].numpy()
-            weight = global_edge_importance[edge_idx]
-            
-            source_text = translate_node(source_id)
-            target_text = translate_node(target_id)
-            
-            print(f"-> {source_text}  <===(Avg Score: {weight:.4f})===>  {target_text}")
-    else:
-        print("No True Positives available in this fold for global analysis.")
-    print("\n[ANALYSIS] Hunting for the strongest Cosine Similarity (Doc-Doc) Bridges:")
-    
-    # We only care about edges where BOTH the source and target are Documents (IDs < num_docs)
-    cosine_edges = []
-    for edge_idx in range(len(global_edge_importance)):
-        source_id = A_tf.indices[edge_idx][0].numpy()
-        target_id = A_tf.indices[edge_idx][1].numpy()
-        
-        # If both nodes are documents, it's a Cosine edge!
-        if source_id < num_docs and target_id < num_docs:
-            # Only keep the ones that actually have some mathematical weight
-            if global_edge_importance[edge_idx] > 0.01: 
-                cosine_edges.append((edge_idx, global_edge_importance[edge_idx]))
+            for word, score in attrs:
+                if word not in global_word_scores:
+                    global_word_scores[word] = []
+                global_word_scores[word].append(score)
                 
-    # Sort them by highest score
-    cosine_edges.sort(key=lambda x: x[1], reverse=True)
-    
-    # Print the Top 5 Semantic Bridges
-    top_cosine = min(5, len(cosine_edges))
-    for i in range(top_cosine):
-        edge_idx, weight = cosine_edges[i]
-        source_id = A_tf.indices[edge_idx][0].numpy()
-        target_id = A_tf.indices[edge_idx][1].numpy()
+        # Average the scores for each word
+        averaged_attributions = []
+        for word, scores in global_word_scores.items():
+            avg_score = np.mean(scores)
+            averaged_attributions.append((word, avg_score))
+            
+        averaged_attributions.sort(key=lambda x: x[1], reverse=True)
         
-        source_text = translate_node(source_id)
-        target_text = translate_node(target_id)
-        
-        print(f"-> {source_text}  <===(Semantic Bridge Score: {weight:.4f})===>  {target_text}")        
+        print("\n[GLOBAL MARKERS] Top Universal Drivers TOWARD Depression:")
+        for word, score in averaged_attributions[:10]:
+            print(f"  [+] {score:+.4f} Avg Contribution: '{word}'")
+            
+        print("\n[GLOBAL PROTECTORS] Top Universal Drivers AWAY from Depression:")
+        for word, score in averaged_attributions[-10:]:
+            print(f"  [-] {score:+.4f} Avg Contribution: '{word}'")
+    else:
+        print("No True Positives available for LIME extraction.")
 
 if __name__ == "__main__":
     main()
