@@ -280,51 +280,300 @@ it mathematically clustered tweets about passive, isolated observation
 
 
 
+=================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
 ==================================================
-      XAI: LIME-STYLE FEATURE ATTRIBUTION
+Train Accuracy: 0.8720 (± 0.0093)
+Test Accuracy:  0.8306 (± 0.0095)
+Test Precision: 0.7899 (± 0.0117)
+Test Recall:    0.7594 (± 0.0085)
+Test F1-Score:  0.7719 (± 0.0086)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 2315
+  -> Guessed Right (True Negative):  2111
+  -> Guessed Wrong (False Positive): 204
+
+Total Depressed Patients (Class 1): 843
+  -> Guessed Right (True Positive):  512
+  -> Guessed Wrong (False Negative): 331
 ==================================================
 
-[LOCAL LIME] Analyzing Patient Node 1...
+[SAVING VISUAL CONFUSION MATRIX]
+Successfully saved high-resolution Confusion Matrix plot to: ../data/confusion_matrix.png
+
+[SAVING ERROR ANALYSIS]
+Successfully saved all 331 False Negatives to: ../data/error_analysis_false_negatives.csv
+
+==================================================
+      MLOps AUDIT: QUADRANT FEATURE EXTRACTION
+==================================================
+
+[LOCAL EXPLANATION] Analyzing Sample Patient Node 1 (True Positive)...
 Original Tweet: "i get spend new years home alone lonely"
-Prediction: Depressed (Probability: 0.6229)
+Prediction: Depressed (Probability: 0.6598)
 
-Top Attributions driving this prediction:
-  [+] +0.0387 Contribution: 'alone' (Pushed TOWARD Depressed)
-  [+] +0.0266 Contribution: 'i' (Pushed TOWARD Depressed)
-  [+] +0.0223 Contribution: 'years' (Pushed TOWARD Depressed)
-  [+] +0.0140 Contribution: 'get' (Pushed TOWARD Depressed)
-  [+] +0.0066 Contribution: 'spend' (Pushed TOWARD Depressed)
+Top Local Attributions:
+  [+] +0.0455 Contribution: 'alone' (Pushed TOWARD Depressed)
+  [+] +0.0295 Contribution: 'i' (Pushed TOWARD Depressed)
+  [+] +0.0259 Contribution: 'years' (Pushed TOWARD Depressed)
+  [+] +0.0240 Contribution: 'get' (Pushed TOWARD Depressed)
+  [+] +0.0050 Contribution: 'spend' (Pushed TOWARD Depressed)
   ...
-  [-] -0.0081 Contribution: 'home' (Pushed TOWARD Non-Depressed)
-  [-] -0.0283 Contribution: 'lonely' (Pushed TOWARD Non-Depressed)
-  [-] -0.0306 Contribution: 'new' (Pushed TOWARD Non-Depressed)
+  [-] -0.0129 Contribution: 'lonely' (Pushed TOWARD Non-Depressed)
+  [-] -0.0267 Contribution: 'new' (Pushed TOWARD Non-Depressed)
 
 ==================================================
-[GLOBAL LIME] Averaging Directional Saliency across 20 True Positives...
+[TRUE POSITIVES (Clinical Baseline)] Averaging Saliency across 110 patients...
+ -> Extracting Gradients: Processed 100 / 110 patients...
+ -> Extracting Gradients: Processed 110 / 110 patients...
 
-[GLOBAL MARKERS] Top Universal Drivers TOWARD Depression:
-  [+] +0.1452 Avg Contribution: 'sigh'
-  [+] +0.1160 Avg Contribution: 'sneakers'
-  [+] +0.1099 Avg Contribution: 'cruel'
-  [+] +0.1058 Avg Contribution: 'life½'
-  [+] +0.1006 Avg Contribution: 'saddepressed'
-  [+] +0.0877 Avg Contribution: 'giving'
-  [+] +0.0800 Avg Contribution: 'physically'
-  [+] +0.0748 Avg Contribution: 'mentally'
-  [+] +0.0697 Avg Contribution: 'least'
-  [+] +0.0693 Avg Contribution: 'included'
+[TRUE POSITIVES (Clinical Baseline) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1716 Avg Contribution: 'overthinking'
+  [+] +0.1253 Avg Contribution: 'jews'
+  [+] +0.1208 Avg Contribution: 'life½'
+  [+] +0.1140 Avg Contribution: 'understands'
+  [+] +0.0931 Avg Contribution: 'cared'
+  [+] +0.0922 Avg Contribution: 'wanting'
+  [+] +0.0913 Avg Contribution: 'cruel'
+  [+] +0.0894 Avg Contribution: 'misunderstood'
+  [+] +0.0884 Avg Contribution: 'saddepressed'
+  [+] +0.0883 Avg Contribution: 'sigh'
 
-[GLOBAL PROTECTORS] Top Universal Drivers AWAY from Depression:
-  [-] -0.0612 Avg Contribution: 'call'
-  [-] -0.0698 Avg Contribution: 'overcoming'
-  [-] -0.0762 Avg Contribution: 'n'
-  [-] -0.0763 Avg Contribution: 'opportunity'
-  [-] -0.0808 Avg Contribution: 'genuinely'
-  [-] -0.0855 Avg Contribution: 'quite'
-  [-] -0.0986 Avg Contribution: 'daughter'
-  [-] -0.1098 Avg Contribution: 'first'
-  [-] -0.1370 Avg Contribution: 'looks'
-  [-] -0.1463 Avg Contribution: 'ready'
+[TRUE POSITIVES (Clinical Baseline) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.1004 Avg Contribution: 'value'
+  [-] -0.1015 Avg Contribution: 'smile'
+  [-] -0.1097 Avg Contribution: 'needs'
+  [-] -0.1131 Avg Contribution: 'chemicals'
+  [-] -0.1138 Avg Contribution: 'forward'
+  [-] -0.1155 Avg Contribution: 'start'
+  [-] -0.1215 Avg Contribution: 'abt'
+  [-] -0.1233 Avg Contribution: 'ready'
+  [-] -0.1269 Avg Contribution: 'looks'
+  [-] -0.1339 Avg Contribution: 'lord'
+
+==================================================
+[TRUE NEGATIVES (Healthy Anchors)] Averaging Saliency across 413 patients...
+ -> Extracting Gradients: Processed 100 / 413 patients...
+ -> Extracting Gradients: Processed 200 / 413 patients...
+ -> Extracting Gradients: Processed 300 / 413 patients...
+ -> Extracting Gradients: Processed 400 / 413 patients...
+ -> Extracting Gradients: Processed 413 / 413 patients...
+
+[TRUE NEGATIVES (Healthy Anchors) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1204 Avg Contribution: 'wen'
+  [+] +0.1170 Avg Contribution: 'crappy'
+  [+] +0.1101 Avg Contribution: 'nobody'
+  [+] +0.0975 Avg Contribution: 'falling'
+  [+] +0.0902 Avg Contribution: 'successful'
+  [+] +0.0804 Avg Contribution: 'medication'
+  [+] +0.0800 Avg Contribution: 'surviving'
+  [+] +0.0770 Avg Contribution: 'ugh'
+  [+] +0.0693 Avg Contribution: 'happened'
+  [+] +0.0692 Avg Contribution: 'separate'
+
+[TRUE NEGATIVES (Healthy Anchors) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.1447 Avg Contribution: 'friendfix'
+  [-] -0.1499 Avg Contribution: 'pffno'
+  [-] -0.1544 Avg Contribution: 'toon'
+  [-] -0.1547 Avg Contribution: 'avoid'
+  [-] -0.1605 Avg Contribution: 'smashed'
+  [-] -0.1739 Avg Contribution: 'dick'
+  [-] -0.1856 Avg Contribution: 'hmu'
+  [-] -0.2076 Avg Contribution: '♥'
+  [-] -0.2258 Avg Contribution: 'sending'
+  [-] -0.2332 Avg Contribution: 'phase'
+
+==================================================
+[FALSE POSITIVES (The Trap Words)] Averaging Saliency across 35 patients...
+ -> Extracting Gradients: Processed 35 / 35 patients...
+
+[FALSE POSITIVES (The Trap Words) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1144 Avg Contribution: 'comed'
+  [+] +0.1124 Avg Contribution: 'lay'
+  [+] +0.0969 Avg Contribution: 'completely'
+  [+] +0.0916 Avg Contribution: 'giving'
+  [+] +0.0899 Avg Contribution: 'hospital'
+  [+] +0.0891 Avg Contribution: 'outrageous'
+  [+] +0.0867 Avg Contribution: 'turning'
+  [+] +0.0848 Avg Contribution: 'hug'
+  [+] +0.0818 Avg Contribution: 'chances'
+  [+] +0.0803 Avg Contribution: 'rn'
+
+[FALSE POSITIVES (The Trap Words) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0558 Avg Contribution: 'bae'
+  [-] -0.0568 Avg Contribution: 'respect'
+  [-] -0.0579 Avg Contribution: 'gifts'
+  [-] -0.0593 Avg Contribution: 'money'
+  [-] -0.0597 Avg Contribution: '😟'
+  [-] -0.0716 Avg Contribution: 'realize'
+  [-] -0.0723 Avg Contribution: 'drive'
+  [-] -0.0816 Avg Contribution: 'love'
+  [-] -0.0831 Avg Contribution: 'deactivated'
+  [-] -0.1188 Avg Contribution: 'hasnt'
+
+==================================================
+[FALSE NEGATIVES (The Missed Signals)] Averaging Saliency across 73 patients...
+ -> Extracting Gradients: Processed 73 / 73 patients...
+
+[FALSE NEGATIVES (The Missed Signals) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1352 Avg Contribution: 'tired'
+  [+] +0.0824 Avg Contribution: 'body'
+  [+] +0.0786 Avg Contribution: 'sucks'
+  [+] +0.0710 Avg Contribution: 'âï'
+  [+] +0.0664 Avg Contribution: 'anyone'
+  [+] +0.0635 Avg Contribution: 'jobless'
+  [+] +0.0634 Avg Contribution: 'sometimes'
+  [+] +0.0609 Avg Contribution: 'feel'
+  [+] +0.0604 Avg Contribution: 'guess'
+  [+] +0.0544 Avg Contribution: 'understand'
+
+[FALSE NEGATIVES (The Missed Signals) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.1440 Avg Contribution: 'drug'
+  [-] -0.1448 Avg Contribution: 'older'
+  [-] -0.1465 Avg Contribution: 'monsters'
+  [-] -0.1493 Avg Contribution: 'wear'
+  [-] -0.1568 Avg Contribution: '💔'
+  [-] -0.1598 Avg Contribution: 'comment'
+  [-] -0.1677 Avg Contribution: 'fear'
+  [-] -0.1838 Avg Contribution: 'growing'
+  [-] -0.1979 Avg Contribution: 'clockwork'
+  [-] -0.2313 Avg Contribution: 'tonite'
+
+==================================================[LOCAL EXPLANATION] Analyzing Sample Patient Node 1 (True Positive)...
+Original Tweet: "i get spend new years home alone lonely"
+Prediction: Depressed (Probability: 0.7038)
+
+Top Local Attributions:
+  [+] +0.0424 Contribution: 'alone' (Pushed TOWARD Depressed)
+  [+] +0.0243 Contribution: 'years' (Pushed TOWARD Depressed)
+  [+] +0.0231 Contribution: 'i' (Pushed TOWARD Depressed)
+  [+] +0.0200 Contribution: 'get' (Pushed TOWARD Depressed)
+  [+] +0.0084 Contribution: 'spend' (Pushed TOWARD Depressed)
+  ...
+  [-] -0.0138 Contribution: 'lonely' (Pushed TOWARD Non-Depressed)
+  [-] -0.0172 Contribution: 'new' (Pushed TOWARD Non-Depressed)
+
+==================================================
+[TRUE POSITIVES (Clinical Baseline)] Averaging Saliency across 113 patients...
+ -> Extracting Gradients: Processed 100 / 113 patients...
+ -> Extracting Gradients: Processed 113 / 113 patients...
+
+[TRUE POSITIVES (Clinical Baseline) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1327 Avg Contribution: 'overthinking'
+  [+] +0.1162 Avg Contribution: 'life½'
+  [+] +0.1154 Avg Contribution: 'jews'
+  [+] +0.1028 Avg Contribution: 'understands'
+  [+] +0.0917 Avg Contribution: 'saddepressed'
+  [+] +0.0862 Avg Contribution: 'wanting'
+  [+] +0.0856 Avg Contribution: 'misunderstood'
+  [+] +0.0848 Avg Contribution: 'attacked'
+  [+] +0.0841 Avg Contribution: 'realizing'
+  [+] +0.0793 Avg Contribution: 'testing'
+
+[TRUE POSITIVES (Clinical Baseline) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0959 Avg Contribution: 'watching'
+  [-] -0.0981 Avg Contribution: 'start'
+  [-] -0.1096 Avg Contribution: 'forward'
+  [-] -0.1147 Avg Contribution: 'ready'
+  [-] -0.1369 Avg Contribution: 'looks'
+  [-] -0.1390 Avg Contribution: 'value'
+  [-] -0.1397 Avg Contribution: 'needs'
+  [-] -0.1435 Avg Contribution: 'chemicals'
+  [-] -0.1455 Avg Contribution: 'lord'
+  [-] -0.1976 Avg Contribution: 'growing'
+
+==================================================
+[TRUE NEGATIVES (Healthy Anchors)] Averaging Saliency across 411 patients...
+ -> Extracting Gradients: Processed 100 / 411 patients...
+ -> Extracting Gradients: Processed 200 / 411 patients...
+ -> Extracting Gradients: Processed 300 / 411 patients...
+ -> Extracting Gradients: Processed 400 / 411 patients...
+ -> Extracting Gradients: Processed 411 / 411 patients...
+
+[TRUE NEGATIVES (Healthy Anchors) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1702 Avg Contribution: 'crappy'
+  [+] +0.0949 Avg Contribution: 'falling'
+  [+] +0.0939 Avg Contribution: 'medication'
+  [+] +0.0935 Avg Contribution: 'separate'
+  [+] +0.0919 Avg Contribution: 'nobody'
+  [+] +0.0874 Avg Contribution: 'wen'
+  [+] +0.0847 Avg Contribution: 'craving'
+  [+] +0.0728 Avg Contribution: 'self'
+  [+] +0.0634 Avg Contribution: 'amount'
+  [+] +0.0613 Avg Contribution: 'annoyed'
+
+[TRUE NEGATIVES (Healthy Anchors) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.1523 Avg Contribution: 'regretting'
+  [-] -0.1562 Avg Contribution: 'avoid'
+  [-] -0.1785 Avg Contribution: 'using'
+  [-] -0.1863 Avg Contribution: 'friendfix'
+  [-] -0.1940 Avg Contribution: 'hmu'
+  [-] -0.2068 Avg Contribution: 'smashed'
+  [-] -0.2135 Avg Contribution: '♥'
+  [-] -0.2328 Avg Contribution: 'phase'
+  [-] -0.2528 Avg Contribution: 'sending'
+  [-] -0.2550 Avg Contribution: 'pffno'
+
+==================================================
+[FALSE POSITIVES (The Trap Words)] Averaging Saliency across 37 patients...
+ -> Extracting Gradients: Processed 37 / 37 patients...
+
+[FALSE POSITIVES (The Trap Words) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.0919 Avg Contribution: 'outrageous'
+  [+] +0.0900 Avg Contribution: 'lazy'
+  [+] +0.0899 Avg Contribution: 'turning'
+  [+] +0.0896 Avg Contribution: 'lay'
+  [+] +0.0872 Avg Contribution: 'hug'
+  [+] +0.0856 Avg Contribution: 'depressed'
+  [+] +0.0839 Avg Contribution: 'lads'
+  [+] +0.0839 Avg Contribution: 'tragic'
+  [+] +0.0814 Avg Contribution: 'fed'
+  [+] +0.0770 Avg Contribution: 'completely'
+
+[FALSE POSITIVES (The Trap Words) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0606 Avg Contribution: 'god'
+  [-] -0.0687 Avg Contribution: 'deactivated'
+  [-] -0.0703 Avg Contribution: 'first'
+  [-] -0.0747 Avg Contribution: 'false'
+  [-] -0.0785 Avg Contribution: 'love'
+  [-] -0.0872 Avg Contribution: '😟'
+  [-] -0.1040 Avg Contribution: 'realize'
+  [-] -0.1041 Avg Contribution: 'drive'
+  [-] -0.1165 Avg Contribution: 'hasnt'
+  [-] -0.1366 Avg Contribution: 'writing'
+
+==================================================
+[FALSE NEGATIVES (The Missed Signals)] Averaging Saliency across 70 patients...
+ -> Extracting Gradients: Processed 70 / 70 patients...
+
+[FALSE NEGATIVES (The Missed Signals) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1283 Avg Contribution: 'tired'
+  [+] +0.0778 Avg Contribution: 'âï'
+  [+] +0.0636 Avg Contribution: 'expectations'
+  [+] +0.0632 Avg Contribution: 'jobless'
+  [+] +0.0591 Avg Contribution: 'sometimes'
+  [+] +0.0546 Avg Contribution: 'body'
+  [+] +0.0538 Avg Contribution: 'understand'
+  [+] +0.0525 Avg Contribution: 'child'
+  [+] +0.0521 Avg Contribution: 'beneath'
+  [+] +0.0497 Avg Contribution: 'anyone'
+
+[FALSE NEGATIVES (The Missed Signals) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.1360 Avg Contribution: 'wear'
+  [-] -0.1365 Avg Contribution: 'haircut'
+  [-] -0.1534 Avg Contribution: 'meat'
+  [-] -0.1605 Avg Contribution: 'older'
+  [-] -0.1650 Avg Contribution: 'drug'
+  [-] -0.1668 Avg Contribution: 'fear'
+  [-] -0.1768 Avg Contribution: 'comment'
+  [-] -0.1820 Avg Contribution: '💔'
+  [-] -0.1874 Avg Contribution: 'clockwork'
+  [-] -0.2314 Avg Contribution: 'tonite'
+
+
+
+
 
 Dataset 2 : learning rate 0.001 patience = 30
 
@@ -425,104 +674,140 @@ Total Depressed Patients (Class 1): 500
 ==================================================
 
 
-==================================================
-      FINAL 5-FOLD CROSS-VALIDATION METRICS
-==================================================
-Train Accuracy: 0.9460 (± 0.0396)
-Test Accuracy:  0.8720 (± 0.0157)
-Test Precision: 0.8715 (± 0.0159)
-Test Recall:    0.8724 (± 0.0156)
-Test F1-Score:  0.8711 (± 0.0156)
-
---- ABSOLUTE CLASSIFICATION COUNTS ---
-Total Undepressed Patients (Class 0): 500
-  -> Guessed Right (True Negative):  438
-  -> Guessed Wrong (False Positive): 62
-
-Total Depressed Patients (Class 1): 500
-  -> Guessed Right (True Positive):  434
-  -> Guessed Wrong (False Negative): 66
-==================================================
-
-[GLOBAL ANALYSIS] The Top 10 Universal Markers for Depression in this Fold:
--> [Clinical Word]: 'principles'  <===(Avg Score: 0.2282)===>  [Clinical Word]: 'we'
--> [Clinical Word]: 'look'  <===(Avg Score: 0.2208)===>  [Clinical Word]: 'surprise'
--> [Clinical Word]: 'ill'  <===(Avg Score: 0.2156)===>  [Clinical Word]: 'ended'
--> [Clinical Word]: 'closed'  <===(Avg Score: 0.2153)===>  [Clinical Word]: 'yet'
--> [Clinical Word]: 'handles'  <===(Avg Score: 0.2145)===>  [Clinical Word]: 'everywhere'
--> [Tweet 708]: "opinion cartoon drew sheneman..."  <===(Avg Score: 0.2139)===>  [Clinical Word]: 'opinion'
--> [Clinical Word]: 'lang'  <===(Avg Score: 0.2093)===>  [Clinical Word]: 'ko'
--> [Clinical Word]: 'failed'  <===(Avg Score: 0.2089)===>  [Clinical Word]: 'included'
--> [Clinical Word]: 'center'  <===(Avg Score: 0.2078)===>  [Clinical Word]: 'hospital'
--> [Clinical Word]: 'person'  <===(Avg Score: 0.2070)===>  [Clinical Word]: 'relaxed'
-
-[ANALYSIS] Hunting for the strongest Cosine Similarity (Doc-Doc) Bridges:
--> [Tweet 3]: "i confirm yes i need stay my meds sometimes chronic meds fat..."  <===(Semantic Bridge Score: 0.1972)===>  [Tweet 397]: "well seems right..."
--> [Tweet 769]: "you enugu you want use taxi please avoid extort you amount s..."  <===(Semantic Bridge Score: 0.1959)===>  [Tweet 560]: "pain you feel today strength you feel tomorrow..."
--> [Tweet 798]: "fucking embarrassing..."  <===(Semantic Bridge Score: 0.1801)===>  [Tweet 798]: "fucking embarrassing..."
--> [Tweet 641]: "ive knee pain since i 12 wasnt overweight time sooo yeah..."  <===(Semantic Bridge Score: 0.1767)===>  [Tweet 943]: "my pain range sideways..."
--> [Tweet 406]: "nyari loho taka tubey te moy taka serr happy womens day ever..."  <===(Semantic Bridge Score: 0.1714)===>  [Tweet 824]: "new week another chance something your comfort zone life giv..."
-
-Based on the specific connections your AI found, the model is doing an amazing job at 
-actually understanding human emotion rather than just memorizing buzzwords. Looking at 
-the word-to-word links, it figured out on its own that people talking 
-about physical sickness ("ill", "hospital") or feeling like a failure ("failed", "closed")
-are highly likely to be struggling, and it even caught depressive slang in other languages 
-("lang" and "ko"). But the most impressive proof is in the document-to-document connections: 
-it successfully linked a person complaining about childhood knee pain directly to someone talking
-about general pain, and paired a tweet about chronic medication fatigue with a tweet expressing 
-total emotional resignation. This proves your model isn't just hunting for the word "depressed"
-—it is successfully matching people who share the exact same underlying psychological pain, 
-even when they use completely different words to describe it.
 
 
-
-==================================================
-      XAI: LIME-STYLE FEATURE ATTRIBUTION
-==================================================
-
-[LOCAL LIME] Analyzing Patient Node 1...
+[LOCAL EXPLANATION] Analyzing Sample Patient Node 1 (True Positive)...
 Original Tweet: "suicide figures since lockdown could friends please copy repost tweet trying demonstrate someone always listening call samaritans uk two two copy retweet please thank you"
-Prediction: Depressed (Probability: 0.9770)
+Prediction: Depressed (Probability: 0.9709)
 
-Top Attributions driving this prediction:
-  [+] +0.0124 Contribution: 'copy' (Pushed TOWARD Depressed)
-  [+] +0.0096 Contribution: 'could' (Pushed TOWARD Depressed)
-  [+] +0.0090 Contribution: 'lockdown' (Pushed TOWARD Depressed)
-  [+] +0.0086 Contribution: 'two' (Pushed TOWARD Depressed)
-  [+] +0.0082 Contribution: 'suicide' (Pushed TOWARD Depressed)
+Top Local Attributions:
+  [+] +0.0142 Contribution: 'copy' (Pushed TOWARD Depressed)
+  [+] +0.0126 Contribution: 'lockdown' (Pushed TOWARD Depressed)
+  [+] +0.0114 Contribution: 'could' (Pushed TOWARD Depressed)
+  [+] +0.0093 Contribution: 'since' (Pushed TOWARD Depressed)
+  [+] +0.0093 Contribution: 'two' (Pushed TOWARD Depressed)
   ...
-  [-] -0.0041 Contribution: 'always' (Pushed TOWARD Non-Depressed)
-  [-] -0.0046 Contribution: 'tweet' (Pushed TOWARD Non-Depressed)
-  [-] -0.0055 Contribution: 'call' (Pushed TOWARD Non-Depressed)
-  [-] -0.0082 Contribution: 'thank' (Pushed TOWARD Non-Depressed)
+  [-] -0.0023 Contribution: 'please' (Pushed TOWARD Non-Depressed)
+  [-] -0.0039 Contribution: 'always' (Pushed TOWARD Non-Depressed)
+  [-] -0.0058 Contribution: 'call' (Pushed TOWARD Non-Depressed)
+  [-] -0.0063 Contribution: 'tweet' (Pushed TOWARD Non-Depressed)
+  [-] -0.0071 Contribution: 'thank' (Pushed TOWARD Non-Depressed)
 
 ==================================================
-[GLOBAL LIME] Averaging Directional Saliency across 20 True Positives...
+[TRUE POSITIVES (Clinical Baseline)] Averaging Saliency across 94 patients...
+ -> Extracting Gradients: Processed 94 / 94 patients...
 
-[GLOBAL MARKERS] Top Universal Drivers TOWARD Depression:
-  [+] +0.1472 Avg Contribution: 'unknown'
-  [+] +0.1054 Avg Contribution: 'strong'
-  [+] +0.0999 Avg Contribution: 'social'
-  [+] +0.0959 Avg Contribution: 'witness'
-  [+] +0.0870 Avg Contribution: 'anxiety'
-  [+] +0.0812 Avg Contribution: 'walk'
-  [+] +0.0776 Avg Contribution: 'sharing'
-  [+] +0.0636 Avg Contribution: 'super'
-  [+] +0.0603 Avg Contribution: 'give'
-  [+] +0.0570 Avg Contribution: 'learning'
+[TRUE POSITIVES (Clinical Baseline) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1408 Avg Contribution: 'unknown'
+  [+] +0.1076 Avg Contribution: 'probably'
+  [+] +0.0799 Avg Contribution: 'sick'
+  [+] +0.0781 Avg Contribution: 'use'
+  [+] +0.0769 Avg Contribution: 'strength'
+  [+] +0.0735 Avg Contribution: 'fatigue'
+  [+] +0.0690 Avg Contribution: 'reading'
+  [+] +0.0650 Avg Contribution: 'terms'
+  [+] +0.0632 Avg Contribution: 'sunshine'
+  [+] +0.0605 Avg Contribution: 'sharing'
 
-[GLOBAL PROTECTORS] Top Universal Drivers AWAY from Depression:
-  [-] -0.0461 Avg Contribution: 'good'
-  [-] -0.0489 Avg Contribution: 'justice'
-  [-] -0.0491 Avg Contribution: 'student'
-  [-] -0.0810 Avg Contribution: 'whole'
-  [-] -0.0890 Avg Contribution: 'conversation'
-  [-] -0.1105 Avg Contribution: 'friday'
-  [-] -0.1261 Avg Contribution: 'appreciated'
-  [-] -0.1295 Avg Contribution: 'next'
-  [-] -0.1312 Avg Contribution: 'season'
-  [-] -0.1420 Avg Contribution: 'happy'
+[TRUE POSITIVES (Clinical Baseline) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0574 Avg Contribution: '✌'
+  [-] -0.0620 Avg Contribution: 'good'
+  [-] -0.0642 Avg Contribution: 'game'
+  [-] -0.0787 Avg Contribution: 'perfect'
+  [-] -0.0970 Avg Contribution: 'luck'
+  [-] -0.1081 Avg Contribution: 'next'
+  [-] -0.1242 Avg Contribution: 'season'
+  [-] -0.1991 Avg Contribution: 'moots'
+  [-] -0.2527 Avg Contribution: 'ms'
+  [-] -0.2798 Avg Contribution: 'rain'
+
+==================================================
+[TRUE NEGATIVES (Healthy Anchors)] Averaging Saliency across 78 patients...
+ -> Extracting Gradients: Processed 78 / 78 patients...
+
+[TRUE NEGATIVES (Healthy Anchors) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.2468 Avg Contribution: 'package'
+  [+] +0.2053 Avg Contribution: 'true'
+  [+] +0.1503 Avg Contribution: 'ways'
+  [+] +0.1440 Avg Contribution: 'others'
+  [+] +0.1340 Avg Contribution: 'right'
+  [+] +0.1266 Avg Contribution: 'use'
+  [+] +0.1165 Avg Contribution: 'power'
+  [+] +0.0890 Avg Contribution: 'ability'
+  [+] +0.0874 Avg Contribution: 'secretary'
+  [+] +0.0811 Avg Contribution: 'struggle'
+
+[TRUE NEGATIVES (Healthy Anchors) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.1025 Avg Contribution: 'ji'
+  [-] -0.1049 Avg Contribution: 'next'
+  [-] -0.1115 Avg Contribution: 'touch'
+  [-] -0.1121 Avg Contribution: 'quality'
+  [-] -0.1127 Avg Contribution: 'peaceful'
+  [-] -0.1127 Avg Contribution: 'great'
+  [-] -0.1242 Avg Contribution: '😂'
+  [-] -0.1284 Avg Contribution: '✨'
+  [-] -0.1310 Avg Contribution: 'tomatoes'
+  [-] -0.1450 Avg Contribution: 'lamb'
+
+==================================================
+[FALSE POSITIVES (The Trap Words)] Averaging Saliency across 14 patients...
+ -> Extracting Gradients: Processed 14 / 14 patients...
+
+[FALSE POSITIVES (The Trap Words) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1915 Avg Contribution: 'feel'
+  [+] +0.1569 Avg Contribution: 'worse'
+  [+] +0.1127 Avg Contribution: 'death'
+  [+] +0.1115 Avg Contribution: 'became'
+  [+] +0.0916 Avg Contribution: 'fall'
+  [+] +0.0773 Avg Contribution: 'cancer'
+  [+] +0.0764 Avg Contribution: 'etc'
+  [+] +0.0713 Avg Contribution: 'recovery'
+  [+] +0.0680 Avg Contribution: 'alone'
+  [+] +0.0541 Avg Contribution: 'medical'
+
+[FALSE POSITIVES (The Trap Words) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0189 Avg Contribution: 'day'
+  [-] -0.0195 Avg Contribution: 'heres'
+  [-] -0.0201 Avg Contribution: 'another'
+  [-] -0.0225 Avg Contribution: 'food'
+  [-] -0.0258 Avg Contribution: 'biden'
+  [-] -0.0294 Avg Contribution: 'week'
+  [-] -0.0342 Avg Contribution: '🗣'
+  [-] -0.0374 Avg Contribution: 'thank'
+  [-] -0.0840 Avg Contribution: '😂'
+  [-] -0.0917 Avg Contribution: 'happy'
+
+==================================================
+[FALSE NEGATIVES (The Missed Signals)] Averaging Saliency across 14 patients...
+ -> Extracting Gradients: Processed 14 / 14 patients...
+
+[FALSE NEGATIVES (The Missed Signals) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1107 Avg Contribution: 'lot'
+  [+] +0.0923 Avg Contribution: '💪'
+  [+] +0.0899 Avg Contribution: 'social'
+  [+] +0.0860 Avg Contribution: 'toll'
+  [+] +0.0818 Avg Contribution: 'ive'
+  [+] +0.0737 Avg Contribution: 'reading'
+  [+] +0.0675 Avg Contribution: 'dogs'
+  [+] +0.0649 Avg Contribution: 'emotional'
+  [+] +0.0641 Avg Contribution: 'lose'
+  [+] +0.0540 Avg Contribution: 'stay'
+
+[FALSE NEGATIVES (The Missed Signals) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0805 Avg Contribution: 'chef'
+  [-] -0.0808 Avg Contribution: 'remove'
+  [-] -0.0857 Avg Contribution: 'ads'
+  [-] -0.0857 Avg Contribution: 'bananas'
+  [-] -0.0857 Avg Contribution: 'cats'
+  [-] -0.1004 Avg Contribution: 'ingrown'
+  [-] -0.1004 Avg Contribution: 'toenail'
+  [-] -0.1086 Avg Contribution: 'appreciated'
+  [-] -0.1145 Avg Contribution: 'content'
+  [-] -0.1497 Avg Contribution: 'youll'
+
+
+
+
 
 
 Dataset 3 : learing rate = 0.02
@@ -627,32 +912,161 @@ Total Depressed Patients (Class 1): 390
   -> Guessed Wrong (False Negative): 56
 ==================================================
 
+
+
+
 ==================================================
-[GLOBAL LIME] Averaging Directional Saliency across 20 True Positives...
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9391 (± 0.0098)
+Test Accuracy:  0.9357 (± 0.0132)
+Test Precision: 0.9302 (± 0.0159)
+Test Recall:    0.9137 (± 0.0183)
+Test F1-Score:  0.9210 (± 0.0155)
 
-[GLOBAL MARKERS] Top Universal Drivers TOWARD Depression:
-  [+] +0.0648 Avg Contribution: 'rut'
-  [+] +0.0603 Avg Contribution: 'similar'
-  [+] +0.0578 Avg Contribution: 'psychologist'
-  [+] +0.0560 Avg Contribution: 'began'
-  [+] +0.0519 Avg Contribution: 'gained'
-  [+] +0.0516 Avg Contribution: 'vivid'
-  [+] +0.0503 Avg Contribution: 'function'
-  [+] +0.0440 Avg Contribution: 'general'
-  [+] +0.0439 Avg Contribution: 'focusing'
-  [+] +0.0435 Avg Contribution: 'prevented'
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 932
+  -> Guessed Right (True Negative):  900
+  -> Guessed Wrong (False Positive): 32
 
-[GLOBAL PROTECTORS] Top Universal Drivers AWAY from Depression:
-  [-] -0.0402 Avg Contribution: 'looks'
-  [-] -0.0402 Avg Contribution: 'competitive'
-  [-] -0.0440 Avg Contribution: 'nice'
-  [-] -0.0457 Avg Contribution: 'remembers'
-  [-] -0.0499 Avg Contribution: 'dreams'
-  [-] -0.0509 Avg Contribution: 'cruise'
-  [-] -0.0579 Avg Contribution: 'later'
-  [-] -0.0587 Avg Contribution: 'boy'
-  [-] -0.0613 Avg Contribution: 'singing'
-  [-] -0.0695 Avg Contribution: 'bye'
+Total Depressed Patients (Class 1): 390
+  -> Guessed Right (True Positive):  337
+  -> Guessed Wrong (False Negative): 53
+==================================================
+
+
+
+[LOCAL EXPLANATION] Analyzing Sample Patient Node 1 (True Positive)...
+Original Tweet: "goes names spiritual eclipse black hole shadow my prison downward spiral ive named lot different things like life way my life long completely getting better times seemed couldnt much worse unless i unthinkable least time unthinkable divorced little year know removed wife i came realize classic borderline personality look i never realized far i ladder life spirit i got away witch queen true chameleon changed kept me guessing balance years never knowing expect finally starting figure i think two dwis since split rapid succession finding i self medicating without realizing license last months go recovering emotionally financially mom dad thank god someone cares two children i leave queen misery threat false allegations me i dared go custody hungry lonely someone nice me care me least little bit i find myself my prison acknowledge fact would anyone want anything me hard accept truth much baggage my exs baggage handed me spare truth times i wished i could flip switch go away times i thought driving bridge abutment truck last second absolutely crazy stuff i see logical time desperate much pain suffered abuser i see called glimmer hint silver lining simple things life offers everyone everyday thank god finally things get better hopefully someday great i keep trying remind myself things could lot worse two great healthy kids love me miss me terribly im entire world i realize alone kept me realizing ive lost vortex hell tugging me years i actually want keep going lifes next challenge spells hope progress ive made far going hell stop know things starting look i dont want go back dark hole life far long"
+Prediction: Depressed (Probability: 0.8633)
+
+Top Local Attributions:
+  [+] +0.0287 Contribution: 'hole' (Pushed TOWARD Depressed)
+  [+] +0.0280 Contribution: 'times' (Pushed TOWARD Depressed)
+  [+] +0.0227 Contribution: 'baggage' (Pushed TOWARD Depressed)
+  [+] +0.0213 Contribution: 'me' (Pushed TOWARD Depressed)
+  [+] +0.0213 Contribution: 'unthinkable' (Pushed TOWARD Depressed)
+  ...
+  [-] -0.0106 Contribution: 'vortex' (Pushed TOWARD Non-Depressed)
+  [-] -0.0114 Contribution: 'hell' (Pushed TOWARD Non-Depressed)
+  [-] -0.0155 Contribution: 'go' (Pushed TOWARD Non-Depressed)
+  [-] -0.0180 Contribution: 'realizing' (Pushed TOWARD Non-Depressed)
+  [-] -0.0252 Contribution: 'truth' (Pushed TOWARD Non-Depressed)
+
+==================================================
+[TRUE POSITIVES (Clinical Baseline)] Averaging Saliency across 59 patients...
+ -> Extracting Gradients: Processed 59 / 59 patients...
+
+[TRUE POSITIVES (Clinical Baseline) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.0938 Avg Contribution: 'pmd'
+  [+] +0.0736 Avg Contribution: 'failing'
+  [+] +0.0716 Avg Contribution: 'rut'
+  [+] +0.0693 Avg Contribution: 'appointment'
+  [+] +0.0677 Avg Contribution: 'disgusting'
+  [+] +0.0625 Avg Contribution: 'similar'
+  [+] +0.0588 Avg Contribution: 'gained'
+  [+] +0.0583 Avg Contribution: 'psychologist'
+  [+] +0.0577 Avg Contribution: 'isolated'
+  [+] +0.0559 Avg Contribution: 'scares'
+
+[TRUE POSITIVES (Clinical Baseline) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0593 Avg Contribution: 'dreams'
+  [-] -0.0600 Avg Contribution: 'later'
+  [-] -0.0609 Avg Contribution: 'rules'
+  [-] -0.0627 Avg Contribution: 'bye'
+  [-] -0.0660 Avg Contribution: 'appearance'
+  [-] -0.0673 Avg Contribution: 'boy'
+  [-] -0.0707 Avg Contribution: 'pinned'
+  [-] -0.0722 Avg Contribution: 'class'
+  [-] -0.0870 Avg Contribution: 'exam'
+  [-] -0.1464 Avg Contribution: 'reminding'
+
+==================================================
+[TRUE NEGATIVES (Healthy Anchors)] Averaging Saliency across 189 patients...
+ -> Extracting Gradients: Processed 100 / 189 patients...
+ -> Extracting Gradients: Processed 189 / 189 patients...
+
+[TRUE NEGATIVES (Healthy Anchors) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1708 Avg Contribution: 'primary'
+  [+] +0.1256 Avg Contribution: 'hyper'
+  [+] +0.0863 Avg Contribution: 'parents'
+  [+] +0.0824 Avg Contribution: 'operation'
+  [+] +0.0797 Avg Contribution: 'handle'
+  [+] +0.0784 Avg Contribution: 'headaches'
+  [+] +0.0718 Avg Contribution: 'joint'
+  [+] +0.0685 Avg Contribution: 'curious'
+  [+] +0.0659 Avg Contribution: 'advice'
+  [+] +0.0649 Avg Contribution: 'homosexual'
+
+[TRUE NEGATIVES (Healthy Anchors) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0577 Avg Contribution: 'ball'
+  [-] -0.0603 Avg Contribution: 'download'
+  [-] -0.0624 Avg Contribution: 'ian'
+  [-] -0.0703 Avg Contribution: 'invited'
+  [-] -0.0730 Avg Contribution: 'species'
+  [-] -0.0771 Avg Contribution: 'comfy'
+  [-] -0.0904 Avg Contribution: 'mistakes'
+  [-] -0.0932 Avg Contribution: 'coughjennacough'
+  [-] -0.1103 Avg Contribution: 'beats'
+  [-] -0.1303 Avg Contribution: 'display'
+
+==================================================
+[FALSE POSITIVES (The Trap Words)] Averaging Saliency across 5 patients...
+ -> Extracting Gradients: Processed 5 / 5 patients...
+
+[FALSE POSITIVES (The Trap Words) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1003 Avg Contribution: 'worse'
+  [+] +0.0796 Avg Contribution: 'years'
+  [+] +0.0732 Avg Contribution: 'feeling'
+  [+] +0.0689 Avg Contribution: 'daughters'
+  [+] +0.0665 Avg Contribution: 'my'
+  [+] +0.0650 Avg Contribution: 'received'
+  [+] +0.0570 Avg Contribution: 'felt'
+  [+] +0.0529 Avg Contribution: 'daughter'
+  [+] +0.0510 Avg Contribution: 'miserable'
+  [+] +0.0494 Avg Contribution: 'autism'
+
+[FALSE POSITIVES (The Trap Words) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0278 Avg Contribution: 'peoples'
+  [-] -0.0286 Avg Contribution: 'beautiful'
+  [-] -0.0334 Avg Contribution: 'stuffguess'
+  [-] -0.0346 Avg Contribution: 'friday'
+  [-] -0.0357 Avg Contribution: 'alot'
+  [-] -0.0406 Avg Contribution: 'tiger'
+  [-] -0.0477 Avg Contribution: 'love'
+  [-] -0.0550 Avg Contribution: 'matrix'
+  [-] -0.0712 Avg Contribution: 'response'
+  [-] -0.1164 Avg Contribution: 'rob'
+
+==================================================
+[FALSE NEGATIVES (The Missed Signals)] Averaging Saliency across 11 patients...
+ -> Extracting Gradients: Processed 11 / 11 patients...
+
+[FALSE NEGATIVES (The Missed Signals) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1092 Avg Contribution: 'depressed'
+  [+] +0.0724 Avg Contribution: 'forum'
+  [+] +0.0696 Avg Contribution: 'me'
+  [+] +0.0656 Avg Contribution: 'etc'
+  [+] +0.0589 Avg Contribution: 'feeling'
+  [+] +0.0583 Avg Contribution: 'zoloft'
+  [+] +0.0569 Avg Contribution: 'feel'
+  [+] +0.0525 Avg Contribution: 'personality'
+  [+] +0.0521 Avg Contribution: 'counseling'
+  [+] +0.0416 Avg Contribution: 'romantic'
+
+[FALSE NEGATIVES (The Missed Signals) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0382 Avg Contribution: 'dream'
+  [-] -0.0416 Avg Contribution: 'forget'
+  [-] -0.0433 Avg Contribution: 'xxx'
+  [-] -0.0451 Avg Contribution: 'mum'
+  [-] -0.0451 Avg Contribution: 'theyre'
+  [-] -0.0499 Avg Contribution: 'special'
+  [-] -0.0608 Avg Contribution: 'rings'
+  [-] -0.0722 Avg Contribution: 'post'
+  [-] -0.1415 Avg Contribution: 'b4'
+  [-] -0.2085 Avg Contribution: 'coz'
+
+
 
 
 
@@ -773,49 +1187,158 @@ profiling multi-layered human experiences surrounding trauma, financial despair,
 -> [Tweet 1569]: "i beginning think i third wheel i currently feeling bit left..."  <===(Semantic Bridge Score: 0.1732)===>  [Tweet 1882]: "young female family history recently i noticed changes my le..."
 
 
+
+
 ==================================================
-      XAI: LIME-STYLE FEATURE ATTRIBUTION
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.9286 (± 0.0071)
+Test Accuracy:  0.9277 (± 0.0107)
+Test Precision: 0.9176 (± 0.0115)
+Test Recall:    0.9198 (± 0.0124)
+Test F1-Score:  0.9186 (± 0.0114)
+
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 644
+  -> Guessed Right (True Negative):  577
+  -> Guessed Wrong (False Positive): 67
+
+Total Depressed Patients (Class 1): 1293
+  -> Guessed Right (True Positive):  1220
+  -> Guessed Wrong (False Negative): 73
 ==================================================
 
-[LOCAL LIME] Analyzing Patient Node 1...
+
+[LOCAL EXPLANATION] Analyzing Sample Patient Node 1 (True Positive)...
 Original Tweet: "deicide hell racing death life mess time growing shorter every regret efforts subceeding im losing restrain insincere promise ive broken nothing touch me i dead exclude body spirit left i problem coping life world condemns me die hell enduring pain hell i remain hell forbidden want hell i wish move wrapped self doubt enmeshed brain darkest depression succumbing waiting hour string snaps inside length second take my life promised i believe anything better i seen body i wait day hell entangled pain balance upset leaning death simplified option lifes little test constantly guarding attack we put feel effect violent pressure tired my tries my wish soon i die hanging threads realms sane world made me way"
 Prediction: Depressed (Probability: 0.9999)
 
-Top Attributions driving this prediction:
+Top Local Attributions:
   [+] +0.0000 Contribution: 'wish' (Pushed TOWARD Depressed)
   [+] +0.0000 Contribution: 'deicide' (Pushed TOWARD Depressed)
   [+] +0.0000 Contribution: 'die' (Pushed TOWARD Depressed)
-  [+] +0.0000 Contribution: 'insincere' (Pushed TOWARD Depressed)
   [+] +0.0000 Contribution: 'enmeshed' (Pushed TOWARD Depressed)
+  [+] +0.0000 Contribution: 'insincere' (Pushed TOWARD Depressed)
   ...
   [-] -0.0000 Contribution: 'leaning' (Pushed TOWARD Non-Depressed)
 
 ==================================================
-[GLOBAL LIME] Averaging Directional Saliency across 20 True Positives...
+[TRUE POSITIVES (Clinical Baseline)] Averaging Saliency across 227 patients...
+ -> Extracting Gradients: Processed 100 / 227 patients...
+ -> Extracting Gradients: Processed 200 / 227 patients...
+ -> Extracting Gradients: Processed 227 / 227 patients...
 
-[GLOBAL MARKERS] Top Universal Drivers TOWARD Depression:
-  [+] +0.0968 Avg Contribution: 'ever'
-  [+] +0.0621 Avg Contribution: 'depressants'
-  [+] +0.0615 Avg Contribution: 'loved'
-  [+] +0.0589 Avg Contribution: 'anti'
-  [+] +0.0570 Avg Contribution: 'enjoyed'
-  [+] +0.0555 Avg Contribution: 'better'
-  [+] +0.0553 Avg Contribution: 'else'
-  [+] +0.0536 Avg Contribution: 'therapists'
-  [+] +0.0457 Avg Contribution: 'good'
-  [+] +0.0446 Avg Contribution: 'crushed'
+[TRUE POSITIVES (Clinical Baseline) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.0784 Avg Contribution: 'bitter'
+  [+] +0.0698 Avg Contribution: 'statement'
+  [+] +0.0551 Avg Contribution: 'depressants'
+  [+] +0.0545 Avg Contribution: 'drink'
+  [+] +0.0543 Avg Contribution: 'therapists'
+  [+] +0.0537 Avg Contribution: 'broken'
+  [+] +0.0518 Avg Contribution: 'anti'
+  [+] +0.0516 Avg Contribution: 'restart'
+  [+] +0.0515 Avg Contribution: 'booze'
+  [+] +0.0511 Avg Contribution: 'lengths'
 
-[GLOBAL PROTECTORS] Top Universal Drivers AWAY from Depression:
-  [-] -0.0299 Avg Contribution: 'nervous'
-  [-] -0.0303 Avg Contribution: 'church'
-  [-] -0.0334 Avg Contribution: 'diagnosis'
-  [-] -0.0378 Avg Contribution: 'policy'
-  [-] -0.0412 Avg Contribution: 'legally'
-  [-] -0.0567 Avg Contribution: 'parents'
-  [-] -0.0735 Avg Contribution: 'ask'
-  [-] -0.0810 Avg Contribution: 'married'
-  [-] -0.1288 Avg Contribution: 'marriage'
-  [-] -0.1552 Avg Contribution: 'wife'
+[TRUE POSITIVES (Clinical Baseline) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0781 Avg Contribution: 'hes'
+  [-] -0.0782 Avg Contribution: 'kit'
+  [-] -0.0818 Avg Contribution: 'brother'
+  [-] -0.0818 Avg Contribution: 'party'
+  [-] -0.0853 Avg Contribution: 'item'
+  [-] -0.0882 Avg Contribution: 'definite'
+  [-] -0.1072 Avg Contribution: 'shes'
+  [-] -0.1168 Avg Contribution: 'scrolling'
+  [-] -0.1297 Avg Contribution: 'arm'
+  [-] -0.1530 Avg Contribution: 'wife'
+
+==================================================
+[TRUE NEGATIVES (Healthy Anchors)] Averaging Saliency across 128 patients...
+ -> Extracting Gradients: Processed 100 / 128 patients...
+ -> Extracting Gradients: Processed 128 / 128 patients...
+
+[TRUE NEGATIVES (Healthy Anchors) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.0951 Avg Contribution: 'failing'
+  [+] +0.0737 Avg Contribution: 'cant'
+  [+] +0.0723 Avg Contribution: 'exhausted'
+  [+] +0.0686 Avg Contribution: 'killing'
+  [+] +0.0651 Avg Contribution: 'fuck'
+  [+] +0.0649 Avg Contribution: 'feel'
+  [+] +0.0628 Avg Contribution: 'losing'
+  [+] +0.0622 Avg Contribution: 'worthless'
+  [+] +0.0619 Avg Contribution: 'smoking'
+  [+] +0.0568 Avg Contribution: 'doomed'
+
+[TRUE NEGATIVES (Healthy Anchors) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0796 Avg Contribution: 'folding'
+  [-] -0.0837 Avg Contribution: 'beef'
+  [-] -0.0853 Avg Contribution: 'parent'
+  [-] -0.0887 Avg Contribution: 'business'
+  [-] -0.0898 Avg Contribution: 'toddler'
+  [-] -0.0914 Avg Contribution: 'joel'
+  [-] -0.1159 Avg Contribution: 'sibling'
+  [-] -0.1306 Avg Contribution: 'sync'
+  [-] -0.1367 Avg Contribution: 'monalove'
+  [-] -0.1507 Avg Contribution: 'apologised'
+
+==================================================
+[FALSE POSITIVES (The Trap Words)] Averaging Saliency across 17 patients...
+ -> Extracting Gradients: Processed 17 / 17 patients...
+
+[FALSE POSITIVES (The Trap Words) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1585 Avg Contribution: 'anxiety'
+  [+] +0.1452 Avg Contribution: 'yada'
+  [+] +0.1303 Avg Contribution: 'accepting'
+  [+] +0.1205 Avg Contribution: 'seriously'
+  [+] +0.0931 Avg Contribution: 'applications'
+  [+] +0.0799 Avg Contribution: 'depression'
+  [+] +0.0754 Avg Contribution: 'even'
+  [+] +0.0712 Avg Contribution: 'remember'
+  [+] +0.0672 Avg Contribution: 'sad'
+  [+] +0.0665 Avg Contribution: 'longest'
+
+[FALSE POSITIVES (The Trap Words) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0584 Avg Contribution: 'told'
+  [-] -0.0673 Avg Contribution: 'aunt'
+  [-] -0.0706 Avg Contribution: 'buying'
+  [-] -0.0770 Avg Contribution: 'dad'
+  [-] -0.0819 Avg Contribution: 'father'
+  [-] -0.0833 Avg Contribution: 'privacy'
+  [-] -0.0975 Avg Contribution: 'refuses'
+  [-] -0.1146 Avg Contribution: 'bestie'
+  [-] -0.1151 Avg Contribution: 'mom'
+  [-] -0.2498 Avg Contribution: 'hes'
+
+==================================================
+[FALSE NEGATIVES (The Missed Signals)] Averaging Saliency across 15 patients...
+ -> Extracting Gradients: Processed 15 / 15 patients...
+
+[FALSE NEGATIVES (The Missed Signals) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1438 Avg Contribution: 'myself'
+  [+] +0.1265 Avg Contribution: 'feeling'
+  [+] +0.1065 Avg Contribution: 'depression'
+  [+] +0.1009 Avg Contribution: 'hate'
+  [+] +0.1005 Avg Contribution: 'suicidal'
+  [+] +0.0862 Avg Contribution: 'resistant'
+  [+] +0.0719 Avg Contribution: 'wake'
+  [+] +0.0709 Avg Contribution: 'plug'
+  [+] +0.0669 Avg Contribution: 'world'
+  [+] +0.0648 Avg Contribution: 'disorder'
+
+[FALSE NEGATIVES (The Missed Signals) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0859 Avg Contribution: 'christmas'
+  [-] -0.0954 Avg Contribution: 'hes'
+  [-] -0.0973 Avg Contribution: 'children'
+  [-] -0.1162 Avg Contribution: 'told'
+  [-] -0.1179 Avg Contribution: 'we'
+  [-] -0.1196 Avg Contribution: 'uncle'
+  [-] -0.1277 Avg Contribution: 'humanitarians'
+  [-] -0.1369 Avg Contribution: 'cancer'
+  [-] -0.1544 Avg Contribution: 'grandparents'
+  [-] -0.2511 Avg Contribution: 'father'
+
+
+
 
 Dataset 5 : learning rate 0.02
 
@@ -937,49 +1460,159 @@ detecting a generic depressed mood, but successfully categorizing the
  to educational burnout.
 
 
-[LOCAL LIME] Analyzing Patient Node 1...
-Original Tweet: "imagine attractive imagine would like desired someone look you disgust ambivalence roll dice bad you roll poorly you treated objectively worse i wish i born attractive fuck"
-Prediction: Depressed (Probability: 0.6925)
+==================================================
+      FINAL 5-FOLD CROSS-VALIDATION METRICS
+==================================================
+Train Accuracy: 0.8671 (± 0.0084)
+Test Accuracy:  0.8755 (± 0.0102)
+Test Precision: 0.8760 (± 0.0110)
+Test Recall:    0.8758 (± 0.0093)
+Test F1-Score:  0.8752 (± 0.0101)
 
-Top Attributions driving this prediction:
-  [+] +0.0697 Contribution: 'disgust' (Pushed TOWARD Depressed)
-  [+] +0.0484 Contribution: 'worse' (Pushed TOWARD Depressed)
-  [+] +0.0386 Contribution: 'objectively' (Pushed TOWARD Depressed)
-  [+] +0.0338 Contribution: 'fuck' (Pushed TOWARD Depressed)
-  [+] +0.0312 Contribution: 'ambivalence' (Pushed TOWARD Depressed)
+--- ABSOLUTE CLASSIFICATION COUNTS ---
+Total Undepressed Patients (Class 0): 1480
+  -> Guessed Right (True Negative):  1285
+  -> Guessed Wrong (False Positive): 195
+
+Total Depressed Patients (Class 1): 1340
+  -> Guessed Right (True Positive):  1184
+  -> Guessed Wrong (False Negative): 156
+==================================================
+
+
+[LOCAL EXPLANATION] Analyzing Sample Patient Node 1 (True Positive)...
+Original Tweet: "imagine attractive imagine would like desired someone look you disgust ambivalence roll dice bad you roll poorly you treated objectively worse i wish i born attractive fuck"
+Prediction: Depressed (Probability: 0.8144)
+
+Top Local Attributions:
+  [+] +0.0399 Contribution: 'concise' (Pushed TOWARD Depressed)
+  [+] +0.0388 Contribution: 'trips' (Pushed TOWARD Depressed)
+  [+] +0.0233 Contribution: 'rollercoasters' (Pushed TOWARD Depressed)
+  [+] +0.0220 Contribution: 'clothing' (Pushed TOWARD Depressed)
+  [+] +0.0210 Contribution: 'paste' (Pushed TOWARD Depressed)
   ...
-  [-] -0.0056 Contribution: 'would' (Pushed TOWARD Non-Depressed)
-  [-] -0.0070 Contribution: 'you' (Pushed TOWARD Non-Depressed)
-  [-] -0.0221 Contribution: 'poorly' (Pushed TOWARD Non-Depressed)
-  [-] -0.0378 Contribution: 'roll' (Pushed TOWARD Non-Depressed)
-  [-] -0.0644 Contribution: 'dice' (Pushed TOWARD Non-Depressed)
+  [-] -0.0070 Contribution: 'diferently' (Pushed TOWARD Non-Depressed)
+  [-] -0.0087 Contribution: 'dating' (Pushed TOWARD Non-Depressed)
+  [-] -0.0118 Contribution: 'shady' (Pushed TOWARD Non-Depressed)
+  [-] -0.0206 Contribution: 'ie' (Pushed TOWARD Non-Depressed)
+  [-] -0.0648 Contribution: 'flood' (Pushed TOWARD Non-Depressed)
 
 ==================================================
-[GLOBAL LIME] Averaging Directional Saliency across 20 True Positives...
+[TRUE POSITIVES (Clinical Baseline)] Averaging Saliency across 234 patients...
+ -> Extracting Gradients: Processed 100 / 234 patients...
+ -> Extracting Gradients: Processed 200 / 234 patients...
+ -> Extracting Gradients: Processed 234 / 234 patients...
 
-[GLOBAL MARKERS] Top Universal Drivers TOWARD Depression:
-  [+] +0.0596 Avg Contribution: 'anxiety'
-  [+] +0.0590 Avg Contribution: 'loneliness'
-  [+] +0.0506 Avg Contribution: 'motivation'
-  [+] +0.0445 Avg Contribution: 'emptier'
-  [+] +0.0439 Avg Contribution: 'kill'
-  [+] +0.0379 Avg Contribution: 'dying'
-  [+] +0.0374 Avg Contribution: 'pops'
-  [+] +0.0341 Avg Contribution: 'afraid'
-  [+] +0.0322 Avg Contribution: 'fucking'
-  [+] +0.0319 Avg Contribution: 'lupus'
+[TRUE POSITIVES (Clinical Baseline) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1544 Avg Contribution: 'tolerate'
+  [+] +0.1298 Avg Contribution: 'starved'
+  [+] +0.1030 Avg Contribution: 'participating'
+  [+] +0.1014 Avg Contribution: 'nonvoluntary'
+  [+] +0.0873 Avg Contribution: 'smell'
+  [+] +0.0793 Avg Contribution: 'hmm'
+  [+] +0.0695 Avg Contribution: 'legitimacy'
+  [+] +0.0690 Avg Contribution: 'fortunatelly'
+  [+] +0.0682 Avg Contribution: 'formulating'
+  [+] +0.0680 Avg Contribution: 'pace'
 
-[GLOBAL PROTECTORS] Top Universal Drivers AWAY from Depression:
-  [-] -0.0119 Avg Contribution: 'we'
-  [-] -0.0149 Avg Contribution: 'programming'
-  [-] -0.0157 Avg Contribution: 'tables'
-  [-] -0.0167 Avg Contribution: 'wanna'
-  [-] -0.0176 Avg Contribution: 'murder'
-  [-] -0.0198 Avg Contribution: 'band'
-  [-] -0.0245 Avg Contribution: 'ask'
-  [-] -0.0267 Avg Contribution: 'holds'
-  [-] -0.0313 Avg Contribution: 'word'
-  [-] -0.0364 Avg Contribution: 'tempted'
+[TRUE POSITIVES (Clinical Baseline) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0961 Avg Contribution: 'surfacing'
+  [-] -0.0986 Avg Contribution: 'supertramp'
+  [-] -0.0991 Avg Contribution: 'end'
+  [-] -0.0997 Avg Contribution: 'becuz'
+  [-] -0.1032 Avg Contribution: 'adopted'
+  [-] -0.1101 Avg Contribution: 'facility'
+  [-] -0.1110 Avg Contribution: 'soreness'
+  [-] -0.1349 Avg Contribution: 'dollar'
+  [-] -0.1356 Avg Contribution: 'revolves'
+  [-] -0.1447 Avg Contribution: 'focused'
+
+==================================================
+[TRUE NEGATIVES (Healthy Anchors)] Averaging Saliency across 262 patients...
+ -> Extracting Gradients: Processed 100 / 262 patients...
+ -> Extracting Gradients: Processed 200 / 262 patients...
+ -> Extracting Gradients: Processed 262 / 262 patients...
+
+[TRUE NEGATIVES (Healthy Anchors) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.0904 Avg Contribution: 'sharing'
+  [+] +0.0568 Avg Contribution: 'l'
+  [+] +0.0444 Avg Contribution: 'link'
+  [+] +0.0380 Avg Contribution: 'sinister'
+  [+] +0.0354 Avg Contribution: 'number'
+  [+] +0.0344 Avg Contribution: 'sprinkle'
+  [+] +0.0339 Avg Contribution: 'ghana'
+  [+] +0.0329 Avg Contribution: 'trophy'
+  [+] +0.0325 Avg Contribution: 'downers'
+  [+] +0.0320 Avg Contribution: 'systems'
+
+[TRUE NEGATIVES (Healthy Anchors) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0668 Avg Contribution: 'lockers'
+  [-] -0.0668 Avg Contribution: 'itinerary'
+  [-] -0.0668 Avg Contribution: 'ramona'
+  [-] -0.0671 Avg Contribution: 'rescinded'
+  [-] -0.0687 Avg Contribution: 'brazils'
+  [-] -0.0689 Avg Contribution: 'factory'
+  [-] -0.0733 Avg Contribution: 'throwdown'
+  [-] -0.0985 Avg Contribution: 'placce'
+  [-] -0.1015 Avg Contribution: 'purposes'
+  [-] -0.1487 Avg Contribution: 'achievement'
+
+==================================================
+[FALSE POSITIVES (The Trap Words)] Averaging Saliency across 37 patients...
+ -> Extracting Gradients: Processed 37 / 37 patients...
+
+[FALSE POSITIVES (The Trap Words) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1212 Avg Contribution: 'masturbating'
+  [+] +0.0977 Avg Contribution: 'jan'
+  [+] +0.0949 Avg Contribution: 'awake'
+  [+] +0.0949 Avg Contribution: 'burried'
+  [+] +0.0817 Avg Contribution: 'link'
+  [+] +0.0668 Avg Contribution: 'ps3'
+  [+] +0.0600 Avg Contribution: 'tricky'
+  [+] +0.0573 Avg Contribution: 'cover'
+  [+] +0.0568 Avg Contribution: 'pit'
+  [+] +0.0509 Avg Contribution: 'glancing'
+
+[FALSE POSITIVES (The Trap Words) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0540 Avg Contribution: 'qualms'
+  [-] -0.0583 Avg Contribution: 'lied'
+  [-] -0.0602 Avg Contribution: 'airbnb'
+  [-] -0.0695 Avg Contribution: 'alcoholdrugs'
+  [-] -0.0711 Avg Contribution: 'disown'
+  [-] -0.0715 Avg Contribution: 'archer'
+  [-] -0.0794 Avg Contribution: 'step2'
+  [-] -0.0976 Avg Contribution: 'hexed'
+  [-] -0.1028 Avg Contribution: 'among'
+  [-] -0.1143 Avg Contribution: 'appearance'
+
+==================================================
+[FALSE NEGATIVES (The Missed Signals)] Averaging Saliency across 31 patients...
+ -> Extracting Gradients: Processed 31 / 31 patients...
+
+[FALSE NEGATIVES (The Missed Signals) MARKERS] Top 10 Drivers TOWARD Depression:
+  [+] +0.1415 Avg Contribution: 'ghana'
+  [+] +0.1326 Avg Contribution: 'alchohol'
+  [+] +0.1321 Avg Contribution: 'link'
+  [+] +0.0984 Avg Contribution: 'plainly'
+  [+] +0.0726 Avg Contribution: 'jan'
+  [+] +0.0666 Avg Contribution: 'underwear'
+  [+] +0.0617 Avg Contribution: 'perv'
+  [+] +0.0599 Avg Contribution: 'bones'
+  [+] +0.0582 Avg Contribution: 'timezones'
+  [+] +0.0530 Avg Contribution: 'blade'
+
+[FALSE NEGATIVES (The Missed Signals) PROTECTORS] Top 10 Drivers AWAY from Depression:
+  [-] -0.0785 Avg Contribution: 'planing'
+  [-] -0.0817 Avg Contribution: 'gag'
+  [-] -0.0829 Avg Contribution: 'rx'
+  [-] -0.0860 Avg Contribution: 'behaviours'
+  [-] -0.0880 Avg Contribution: 'associated'
+  [-] -0.0894 Avg Contribution: 'locks'
+  [-] -0.0909 Avg Contribution: 'backgrounds'
+  [-] -0.0914 Avg Contribution: 'tragically'
+  [-] -0.1364 Avg Contribution: 'end'
+  [-] -0.1389 Avg Contribution: 'focused'
+
 
 
 

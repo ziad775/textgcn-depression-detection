@@ -20,8 +20,9 @@ SAFE_STOPWORDS = set(stopwords.words('english')) - CLINICAL_WHITELIST
 
 def clean_text(text: str) -> str:
     """
-    Cleans raw social media text, preserves clinical pronouns, translates emojis,
-    and destroys Mojibake/Punctuation noise to optimize Graph Node creation.
+    Cleans raw social media text, preserves clinical pronouns, extracts native emojis,
+    destroys Mojibake/Punctuation noise, and re-injects emojis to optimize both 
+    Graph Node creation and Transformer embedding.
     """
     if not isinstance(text, str):
         return ""
@@ -35,23 +36,24 @@ def clean_text(text: str) -> str:
     if not re.search(r'[a-zA-Z]', text):
         return "" 
 
-    # 3. Preserve & Translate Emojis (Crucial for GoEmotions)
-    # e.g., 💔 becomes " broken_heart "
-    #text = emoji.demojize(text, delimiters=(" ", " "))    
     text = text.lower()
     
-    # 4. Standard Social Media Cleaning
+    # 3. Standard Social Media Cleaning
     text = re.sub(r'\@\w+', '', text)  # Remove @ mentions
     text = re.sub(r'\#\w+', '', text)  # Remove # hashtags
     text = re.sub(r'<.*?>', '', text)  # Remove HTML tags
     
-    # 5. THE NUMBER CRUSHER
+    # 4. THE NUMBER CRUSHER
     # Removes all standalone digits to prevent matrix bloat and noisy graph edges
     text = re.sub(r'\b\d+\b', '', text)
 
+    # 5. EMOJI EXTRACTION (Strategy 1)
+    # Pull all raw emojis out of the text (separated by spaces for TF-IDF clarity) 
+    # BEFORE the punctuation stripper destroys them
+    raw_emojis = ' '.join(char for char in text if emoji.is_emoji(char))
+
     # 6. AGGRESSIVE PUNCTUATION STRIPPER
-    # Because emojis are now text, we can safely destroy all punctuation 
-    # to prevent node duplication (e.g., merging "approach." and "approach")
+    # Destroys all punctuation (which will unfortunately also delete emojis inside 'text')
     text = re.sub(r'[^\w\s]', '', text)
 
     # 7. SMART STOP-WORD REMOVAL
@@ -60,10 +62,16 @@ def clean_text(text: str) -> str:
     filtered_words = [w for w in words if w not in SAFE_STOPWORDS]
     text = " ".join(filtered_words)
 
-    # 8. Clean up white spaces
+    # 8. EMOJI RE-INJECTION (Strategy 1)
+    # Append the raw emojis back to the end of the cleaned string 
+    # so the GoEmotions Transformer can process them properly
+    if raw_emojis:
+        text = text + " " + raw_emojis
+
+    # 9. Clean up white spaces
     text = re.sub(r'\s+', ' ', text).strip()
     
-    # 9. Final Safety Check (Must be at least 2 characters long)
+    # 10. Final Safety Check (Must be at least 2 characters long)
     if len(text) < 2:
         return ""
         
@@ -89,7 +97,7 @@ def load_and_clean_data(file_path: str) -> pd.DataFrame:
             df.rename(columns={col: 'label'}, inplace=True)
             break
             
-    print("Cleaning social media posts (Applying Smart Stop-Word Filter & Demojization)...")
+    print("Cleaning social media posts (Applying Smart Stop-Word Filter & Native Emoji Extraction)...")
     original_len = len(df)
     
     # Apply the aggressive cleaning function

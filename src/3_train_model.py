@@ -10,6 +10,11 @@ import pandas as pd
 from sklearn.model_selection import KFold
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from sklearn.utils.class_weight import compute_class_weight
+
+# --- NEW VISUALIZATION IMPORTS ---
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 from model import TextGCNModel
 from preprocessing import load_and_clean_data
 
@@ -258,6 +263,28 @@ def main():
     print(f"  -> Guessed Right (True Positive):  {tp} ")
     print(f"  -> Guessed Wrong (False Negative): {fn} ")
     print("==================================================")
+
+    # ==========================================
+    # VISUAL CONFUSION MATRIX GENERATOR
+    # ==========================================
+    print("\n[SAVING VISUAL CONFUSION MATRIX]")
+    plt.figure(figsize=(8, 6))
+    
+    # Create a beautiful heatmap using Seaborn
+    sns.heatmap(total_cm, annot=True, fmt='d', cmap='Blues', 
+                cbar=False, annot_kws={"size": 16},
+                xticklabels=['Not Depressed (0)', 'Depressed (1)'],
+                yticklabels=['Not Depressed (0)', 'Depressed (1)'])
+    
+    plt.title('Global Confusion Matrix (5-Fold CV)', fontsize=16, pad=15)
+    plt.ylabel('Actual Patient Status', fontsize=14)
+    plt.xlabel('Model Prediction', fontsize=14)
+    
+    # Save the plot as a high-resolution PNG for your thesis
+    cm_path = "../data/confusion_matrix.png"
+    plt.savefig(cm_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Successfully saved high-resolution Confusion Matrix plot to: {cm_path}")
     
     print("\n[SAVING ERROR ANALYSIS]")
     error_df = pd.DataFrame(false_negatives_list)
@@ -266,25 +293,28 @@ def main():
     print(f"Successfully saved all {len(error_df)} False Negatives to: {error_path}")
 
     # ==========================================
-    # LIME-STYLE EXPLAINABLE AI EXECUTION
+    # GLOBAL XAI: CONFUSION MATRIX QUADRANT ANALYSIS
     # ==========================================
     print("\n==================================================")
-    print("      XAI: LIME-STYLE FEATURE ATTRIBUTION         ")
+    print("      MLOps AUDIT: QUADRANT FEATURE EXTRACTION      ")
     print("==================================================")
-    
+
     try:
         vocab_list = np.load("../data/vocab.npy", allow_pickle=True)
     except FileNotFoundError:
         print("[WARNING] Could not find vocab.npy. Word nodes will show as raw indices.")
         vocab_list = None
 
-    # Find True Positives to explain
-    true_positives = [i for i, doc_id in enumerate(test_mask_indices) if y_true_test[i] == 1 and y_pred_test[i] == 1]
-    
-    if len(true_positives) > 0:
-        # 1. LOCAL LIME ANALYSIS (Explain a single patient)
-        target_patient_idx = test_mask_indices[true_positives[0]]
-        print(f"\n[LOCAL LIME] Analyzing Patient Node {target_patient_idx}...")
+    # 1. Split the test set into the four Confusion Matrix quadrants
+    tp_indices = [i for i, doc_id in enumerate(test_mask_indices) if y_true_test[i] == 1 and y_pred_test[i] == 1]
+    tn_indices = [i for i, doc_id in enumerate(test_mask_indices) if y_true_test[i] == 0 and y_pred_test[i] == 0]
+    fp_indices = [i for i, doc_id in enumerate(test_mask_indices) if y_true_test[i] == 0 and y_pred_test[i] == 1]
+    fn_indices = [i for i, doc_id in enumerate(test_mask_indices) if y_true_test[i] == 1 and y_pred_test[i] == 0]
+
+    # Optional: Keep a single local analysis printout for reference
+    if len(tp_indices) > 0:
+        target_patient_idx = test_mask_indices[tp_indices[0]]
+        print(f"\n[LOCAL EXPLANATION] Analyzing Sample Patient Node {target_patient_idx} (True Positive)...")
         print(f"Original Tweet: \"{original_texts[target_patient_idx]}\"")
         
         attributions, prob = extract_lime_style_attributions(
@@ -293,7 +323,7 @@ def main():
         )
         
         print(f"Prediction: Depressed (Probability: {prob:.4f})")
-        print("\nTop Attributions driving this prediction:")
+        print("\nTop Local Attributions:")
         
         positive_drivers = [x for x in attributions if x[1] > 0][:5]
         negative_drivers = [x for x in attributions if x[1] < 0][-5:]
@@ -303,44 +333,64 @@ def main():
         print("  ...")
         for word, score in negative_drivers:
             print(f"  [-] {score:+.4f} Contribution: '{word}' (Pushed TOWARD Non-Depressed)")
-            
-        # 2. GLOBAL LIME ANALYSIS (Average attributions across patients)
-        import random
-        sample_size = min(20, len(true_positives))
-        sampled_indices = random.sample(true_positives, sample_size)
-        
+
+    # 2. Define a clean, reusable helper function to process any quadrant
+    def analyze_quadrant(quadrant_name, indices_list, test_mask_indices, model, X_tf, A_tf, vocab_list, num_docs):
+        if len(indices_list) == 0:
+            print(f"\n[{quadrant_name}] No patients fell into this quadrant.")
+            return
+
         print(f"\n==================================================")
-        print(f"[GLOBAL LIME] Averaging Directional Saliency across {sample_size} True Positives...")
+        print(f"[{quadrant_name}] Averaging Saliency across {len(indices_list)} patients...")
         
         global_word_scores = {}
-        for i in sampled_indices:
+        
+        # Iterate through every patient in the quadrant
+        for count, i in enumerate(indices_list, start=1):
             pat_idx = test_mask_indices[i]
+            
+            # Progress tracker for the terminal
+            if count % 100 == 0 or count == len(indices_list):
+                print(f" -> Extracting Gradients: Processed {count} / {len(indices_list)} patients...")
+                
             attrs, _ = extract_lime_style_attributions(
                 model=model, X_tf=X_tf, A_tf=A_tf, target_node_idx=pat_idx, 
                 target_class=1, vocab_list=vocab_list, num_docs=num_docs
             )
+            
+            # Accumulate the scores
             for word, score in attrs:
                 if word not in global_word_scores:
                     global_word_scores[word] = []
                 global_word_scores[word].append(score)
                 
-        # Average the scores for each word
+        # Average the accumulated scores
         averaged_attributions = []
         for word, scores in global_word_scores.items():
             avg_score = np.mean(scores)
             averaged_attributions.append((word, avg_score))
             
+        # Sort from highest positive impact to highest negative impact
         averaged_attributions.sort(key=lambda x: x[1], reverse=True)
         
-        print("\n[GLOBAL MARKERS] Top Universal Drivers TOWARD Depression:")
+        # Output the results for this specific quadrant
+        print(f"\n[{quadrant_name} MARKERS] Top 10 Drivers TOWARD Depression:")
         for word, score in averaged_attributions[:10]:
             print(f"  [+] {score:+.4f} Avg Contribution: '{word}'")
             
-        print("\n[GLOBAL PROTECTORS] Top Universal Drivers AWAY from Depression:")
+        print(f"\n[{quadrant_name} PROTECTORS] Top 10 Drivers AWAY from Depression:")
         for word, score in averaged_attributions[-10:]:
             print(f"  [-] {score:+.4f} Avg Contribution: '{word}'")
-    else:
-        print("No True Positives available for LIME extraction.")
+
+    # 3. Execute the analysis pipeline for all four quadrants
+    analyze_quadrant("TRUE POSITIVES (Clinical Baseline)", tp_indices, test_mask_indices, model, X_tf, A_tf, vocab_list, num_docs)
+    analyze_quadrant("TRUE NEGATIVES (Healthy Anchors)", tn_indices, test_mask_indices, model, X_tf, A_tf, vocab_list, num_docs)
+    analyze_quadrant("FALSE POSITIVES (The Trap Words)", fp_indices, test_mask_indices, model, X_tf, A_tf, vocab_list, num_docs)
+    analyze_quadrant("FALSE NEGATIVES (The Missed Signals)", fn_indices, test_mask_indices, model, X_tf, A_tf, vocab_list, num_docs)
+    
+    print("\n==================================================")
+    print("             MLOps AUDIT COMPLETE                 ")
+    print("==================================================")
 
 if __name__ == "__main__":
     main()
